@@ -5,12 +5,14 @@
 The CLI handles grouping by `attachmentId` and merging responses automatically:
 
 ```bash
-npx -y deepcitation verify --citations .deepcitation/citations-keyed.json
+npx -y deepcitation verify \
+  --citations .deepcitation/citations-keyed-{timestamp}.json \
+  --out .deepcitation/verify-response-{timestamp}.json
 ```
 
-Output is saved to `.deepcitation/verify-response.json` by default. Contains verification statuses and evidence images.
+Use the same `{timestamp}` as the rest of this run's artifacts. Contains verification statuses and evidence images.
 
-Also save the extracted citations as `.deepcitation/citations.json` — the `CitationRecord` (object keyed by citation key, NOT an array).
+Also save the extracted citations as `.deepcitation/citations-{timestamp}.json` — the `CitationRecord` (object keyed by citation key, NOT an array).
 
 ## Deliver results — HTML or markdown
 

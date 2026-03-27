@@ -32,7 +32,7 @@ Follow [prepare-sources.md](./prepare-sources.md) for each source document. Ever
 
 Build an HTML document that:
 1. **Presents the claims** in a clean, readable layout (not a raw chat transcript)
-2. **Restructures** the conversation content into a coherent document — group related claims, use headings, and make it presentable as a standalone report
+2. **Restructures** the conversation content into a coherent document — group related claims, use headings, and make it presentable as a standalone report. Do not introduce new claims or rephrase conclusions — present the same claims from the natural response, only reformatted. The content stays the same; only the structure and format change.
 3. **Cites every claim** using the `<<<CITATION_DATA>>>` format from Path C in [build-citations.md](./build-citations.md)
 
 Use the canonical citation format spec:

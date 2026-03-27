@@ -80,15 +80,19 @@ Never:
 
 ```bash
 npx -y deepcitation keygen \
-  --citations .deepcitation/citations.json \
-  --out .deepcitation/citations-keyed.json
+  --citations .deepcitation/citations-{timestamp}.json \
+  --out .deepcitation/citations-keyed-{timestamp}.json
 ```
 
-This prints the mapping to stderr and writes the re-keyed citations to `citations-keyed.json`. Use `citations-keyed.json` for the verify step.
+Use the same `{timestamp}` as the citations file saved in Step 3. This prints the mapping to stderr and writes the re-keyed citations to `citations-keyed-{timestamp}.json`. Use this file for the verify step.
 
 ### 5. Annotate HTML and build key map
 
 See [annotate-html.md](./annotate-html.md) for `data-citation-key` placement rules, key-map building, and citation drawer triggers.
+
+## Path D: Chat to verified output
+
+Load [chat-to-html.md](./chat-to-html.md). This path handles chat-only conversations — do not duplicate its logic here.
 
 ## Path C: Generate new cited response from scratch
 

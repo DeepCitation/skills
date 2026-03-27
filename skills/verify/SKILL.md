@@ -71,7 +71,7 @@ Once your natural response is complete, run the verification pipeline on the cla
 Every invocation of `/verify` MUST end with one of these deliverables — no exceptions:
 
 1. **An injected HTML file** with DeepCitation popovers embedded (the standard output), OR
-2. **A citation status summary** listing each claim, its verification status (`found`/`partial_text_found`/`not_found`/etc.), and the source it was checked against
+2. **Markdown with citation indicators and a status summary table** — inline `✓`/`⚠`/`✗` after each claim, followed by a summary table (see `verify-and-inject.md` Option 2)
 
 A cached `prepare` response does NOT mean verification is done. Preparing a file only extracts its content — you must still build citations, run `npx -y deepcitation verify`, and inject the results. Never treat a cached prepare artifact as proof that verification has already occurred. If `.deepcitation/` contains prepare outputs but no `verify-response-*.json`, verification has NOT been run.
 
