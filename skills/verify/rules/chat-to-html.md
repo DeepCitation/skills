@@ -1,12 +1,18 @@
-# Chat to HTML — Generate a Cited HTML Response
+# Chat to Verified Output — Generate a Cited Response
 
-Use this path when the conversation contains a chat-style exchange (questions + AI answers) and you need to produce a standalone HTML file with DeepCitation verification. This is common when a user runs `/verify` after a back-and-forth conversation that referenced source documents.
+Use this path when the conversation contains a chat-style exchange (questions + AI answers) and you need to produce a verified output with DeepCitation. This is common when a user runs `/verify` after a back-and-forth conversation that referenced source documents.
 
 ## When does this apply?
 
 - The conversation has AI-generated claims (answers, analysis, summaries) but **no existing HTML output**
 - Source documents were discussed or attached in the conversation
-- The user wants a verifiable, shareable HTML artifact — not just inline text
+
+## Choose the output format
+
+- **HTML** (default for complex reports): Generate a standalone HTML document, then verify, inject, and open. Best when the user wants a shareable artifact or the content has structure (tables, sections, multiple sources).
+- **Markdown with indicators** (for quick Q&A): When the conversation is a short exchange and HTML would be overkill, verify the claims and report results inline with `✓`/`⚠`/`✗` indicators plus a summary table. See [verify-and-inject.md](./verify-and-inject.md) Option 2.
+
+When in doubt, prefer HTML — it provides the richer verification experience with popovers.
 
 ## Workflow
 

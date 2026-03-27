@@ -1,5 +1,7 @@
 # Build Citations
 
+**Every claim, value, or fact from source documents gets a citation.** This applies to ALL paths below. If a human would need to open a source document to verify it, cite it. This includes values, dates, names, measurements, findings, diagnoses, reference ranges, percentages, scores, and any restated or summarized content. Underciting defeats the purpose — when in doubt, cite it.
+
 This step depends on what the [analyze-input](./analyze-input.md) step found.
 
 ## Path A: Existing cited output with `<<<CITATION_DATA>>>`
