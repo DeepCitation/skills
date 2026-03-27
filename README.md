@@ -18,7 +18,7 @@ Or add it manually — in your project's `.claude/settings.json`, add the skill 
 
 ### Claude Cowork (claude.ai)
 
-1. Download [verify.zip](../../verify.zip) from the repo root (auto-built from `packages/skills/skills/verify/`)
+1. Download [`verify.zip`](https://github.com/DeepCitation/skills/releases/download/verify-latest/verify.zip)
 2. Go to [claude.ai/customize/skills](https://claude.ai/customize/skills)
 3. Upload `verify.zip`
 4. Start or join a Cowork chat, then end your message with `/verify` to verify claims against source documents
