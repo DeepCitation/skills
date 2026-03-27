@@ -14,7 +14,9 @@ Also save the extracted citations as `.deepcitation/citations.json` — the `Cit
 
 ## Inject into HTML
 
-Use this when you followed Path B — you annotated the HTML with `data-citation-key` attributes and built a key-map.
+**Every path ends with injection.** The final deliverable of the verify skill is always a static `.html` file with the DeepCitation CDN runtime injected. Never deliver plain text, markdown, or un-injected HTML as the final output — always run `inject` to produce the finished file.
+
+This requires an annotated HTML file with `data-citation-key` attributes and a key-map. If you don't have these yet, go back to [annotate-html.md](./annotate-html.md) and build them first.
 
 ```bash
 npx -y deepcitation inject \
@@ -30,6 +32,51 @@ This injects before `</body>`:
 - Verification JSON (`<script id="dc-data">`)
 - The CDN runtime bundle (Preact + React popover components + Tailwind CSS)
 - Auto-init script that resolves human-readable `data-citation-key` values to hashed keys via the key map, then wires up click handlers
+
+## Customize the auto-init (variant & indicator)
+
+The injected auto-init script calls `window.DeepCitationPopover.init({...})`. After injection, you can edit the init call in the output HTML to pass additional options. Choose a **variant** (how the citation wraps the claim text) and an **indicator** (the small status icon).
+
+### Citation variants
+
+| Variant | Description | Best for |
+|---------|-------------|----------|
+| `text` | Plain text, inherits surrounding styling | Default — blends into any layout |
+| `linter` | Inline text with semantic underline (green/yellow/red) | Reports where you want subtle inline highlighting |
+| `chip` | Pill/badge with neutral gray background | Dashboards, structured data |
+| `brackets` | `[text ✓]` with brackets around the claim | Academic or legal documents |
+| `superscript` | Small raised footnote-style marker `[1]` after claim | Traditional footnote style |
+| `footnote` | Clean footnote number marker | Formal reports |
+| `block` | Sharp, square-bordered inline box | Technical documents |
+
+### Status indicators
+
+| Indicator | Description |
+|-----------|-------------|
+| `icon` | Check mark (✓) or X — **default** |
+| `dot` | Small colored circle (green/yellow/red) |
+| `caret` | Dropdown caret arrow |
+| `none` | No indicator (popover still works on click) |
+
+### How to customize
+
+After running `inject`, edit the auto-init `<script>` in the output HTML:
+
+```html
+<!-- Default (text variant, icon indicator) -->
+<script>window.DeepCitationPopover&&window.DeepCitationPopover.init({theme:"auto"});</script>
+
+<!-- Customized (linter variant, dot indicator) -->
+<script>window.DeepCitationPopover&&window.DeepCitationPopover.init({theme:"auto",variant:"linter",indicatorVariant:"dot"});</script>
+```
+
+Pick the variant and indicator that best match the report's style. If unsure, `text` + `icon` (the defaults) work well for most reports.
+
+## Keep metadata out of the report
+
+The HTML report is for end users. **Never render internal metadata as visible content** — this includes `attachmentId`, hashed citation keys, `lineIds`, `pageNumber`, `page_id`, and raw JSON structures. These belong in JSON artifacts and `data-` attributes only.
+
+The user should see claims and their verification status (via the variant/indicator UI), not API internals. Only surface metadata in the report if the user explicitly requests it.
 
 ## Validate before declaring done
 
