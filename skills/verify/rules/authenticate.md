@@ -2,23 +2,17 @@
 
 You **must** have a valid `DEEPCITATION_API_KEY` before calling any other `deepcitation` command. Follow these steps in order — do **not** skip ahead or give up.
 
-## Step 1: Check for existing key
-
-```bash
-echo "${DEEPCITATION_API_KEY:+key is set}"
-```
-
-If it prints "key is set", you're done — proceed to the next workflow step.
-
-## Step 2: Load saved credentials
+## Step 1: Load or confirm key
 
 ```bash
 eval "$(npx -y deepcitation env 2>/dev/null)" && echo "${DEEPCITATION_API_KEY:+key is set}"
 ```
 
-If it prints "key is set", you're done.
+`deepcitation env` checks the environment first, then falls back to saved credentials. If it prints "key is set", you're done — proceed to the next workflow step.
 
-## Step 3: Run interactive login
+## Step 2: Run interactive login
+
+If step 1 did not print "key is set":
 
 ```bash
 npx -y deepcitation login
@@ -27,13 +21,7 @@ npx -y deepcitation login
 This opens a browser for the user to authenticate. **Wait for it to complete** — it prints credentials on success. Then load the key:
 
 ```bash
-eval "$(npx -y deepcitation env 2>/dev/null)"
-```
-
-## Step 4: Verify before continuing
-
-```bash
-echo "${DEEPCITATION_API_KEY:+key is set}"
+eval "$(npx -y deepcitation env 2>/dev/null)" && echo "${DEEPCITATION_API_KEY:+key is set}"
 ```
 
 If this still prints nothing, ask the user to check their login and retry. **Do not proceed without a valid key.**
