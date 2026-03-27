@@ -4,6 +4,10 @@ Upload **every** source file to the DeepCitation API. Every prepared file enable
 
 The response JSON contains the `attachmentId` (needed for verify) and `deepTextPromptPortion` (extracted text with page/line metadata).
 
+## Always use `prepare` — never other content extraction tools
+
+`prepare` is the **only** way to read source content during verification. Do not use OCR tools, PDF readers, or URL fetch/crawl tools to extract source text — their output lacks the `<line id>` and `<page_number>` markup needed for citations. For URLs, always use `npx -y deepcitation prepare <url>` instead of web crawling or fetching tools.
+
 ```bash
 # Prepare a local file (PDF, image, DOCX, XLSX, PPTX, CSV, etc.)
 npx -y deepcitation prepare source.pdf

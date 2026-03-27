@@ -20,6 +20,11 @@ Verify claims against source documents using the DeepCitation API, saving JSON a
 
 ## Key Rules
 
+- **Use `prepare` for ALL source reading — never use other tools to read source content.** When this skill is active, `npx -y deepcitation prepare <file>` and `npx -y deepcitation prepare <url>` replace all other methods of extracting content from sources:
+  - **Instead of OCR tools** → use `prepare` on the image/PDF
+  - **Instead of PDF readers** → use `prepare` on the PDF
+  - **Instead of URL crawling / web fetch tools** → use `prepare <url>` (i.e. `prepareUrl`)
+  - The `deepTextPromptPortion` returned by `prepare` contains structured text with `<line id>` tags and `<page_number>` tags that are **required** for building citations. Content extracted by other tools lacks these markers and cannot be used for citation line IDs.
 - **`page_id` and `line_ids` MUST come from the `deepTextPromptPortion`** — see [rules/line-ids.md](rules/line-ids.md) for details.
 - **Coverage audit**: After generating citations, spawn a subagent to audit the report/chat and confirm all facts, sources, names, dates, and values have deepcitations. The subagent should flag any uncited claims.
 
