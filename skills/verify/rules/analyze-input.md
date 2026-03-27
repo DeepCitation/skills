@@ -21,14 +21,17 @@ Before calling any API, scan all available context:
 **B) Existing cited output found** (conversation contains `[N]` markers + `<<<CITATION_DATA>>>`)
 → Skip citation building. Extract citations and source file references, prepare any source files not yet uploaded, then verify and inject.
 
-**C) Uncited AI-generated content found** (substantive claims WITHOUT citation markers)
-→ Most common case when a user runs `/verify` after getting a response. Identify the source documents (from conversation context, file references, or ask if truly unclear). **Ask before guessing** — especially when sources are internal/intranet URLs or documents the user may need to manually download, print to PDF, or upload for the API to access. Running the full pipeline against the wrong sources wastes time and produces misleading results. Prepare them, re-generate the content WITH citations, verify, and inject.
+**C) Uncited AI-generated content with existing HTML** (substantive claims WITHOUT citation markers, but HTML output exists)
+→ Identify the source documents (from conversation context, file references, or ask if truly unclear). **Ask before guessing** — especially when sources are internal/intranet URLs or documents the user may need to manually download, print to PDF, or upload for the API to access. Running the full pipeline against the wrong sources wastes time and produces misleading results. Prepare them, re-generate the content WITH citations, verify, and inject.
 
-**D) A text/HTML file provided** (`/verify analysis.txt` or `/verify report.html`)
+**D) Chat-only — AI claims but no HTML output** (conversation has answers/analysis but no HTML file was generated)
+→ Common when a user runs `/verify` after a Q&A or analysis conversation. Load [chat-to-html.md](./chat-to-html.md) to generate a standalone cited HTML document from the conversation claims, then verify and inject.
+
+**E) A text/HTML file provided** (`/verify analysis.txt` or `/verify report.html`)
 → Read the file. If it contains `<<<CITATION_DATA>>>`, treat as path B. Otherwise, treat the file's content as the claims to verify and proceed through the full pipeline.
 
-**E) Multiple verifiable items found** (e.g., multiple reports, multiple AI responses)
+**F) Multiple verifiable items found** (e.g., multiple reports, multiple AI responses)
 → Verify ALL of them. Run the pipeline for each one.
 
-**F) Nothing found and no arguments**
+**G) Nothing found and no arguments**
 → Only in this case, ask the user what they want to verify.
