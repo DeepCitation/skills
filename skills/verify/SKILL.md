@@ -10,13 +10,13 @@ Verify claims against source documents using the DeepCitation API, saving JSON a
 
 ## Prerequisites
 
-- `DEEPCITATION_API_KEY` environment variable must be set. If not set, try loading saved credentials:
-  ```bash
-  eval "$(npx -y deepcitation env 2>/dev/null)"
-  ```
-  If that also fails, tell the user to run `npx -y deepcitation login` first, then retry.
+- **Authentication**: Load [rules/authenticate.md](rules/authenticate.md) and follow it **before any other step**. Never skip login — never give up if the key is missing.
 - Source files (PDF, DOCX, images, etc.) must be accessible on disk or via URL
 - Accepted file types: PDF, images (JPG, PNG), Office files (DOCX, XLSX, PPTX), CSV, TSV, ODF
+
+## Final deliverable
+
+The output of this skill is **always a static HTML file with the DeepCitation CDN runtime injected** (via `npx -y deepcitation inject`). Never report results as plain text, markdown, or un-injected HTML. Every path — A through G — must end with an injected `.html` file opened for the user.
 
 ## Key Rules
 
@@ -32,7 +32,7 @@ Verify claims against source documents using the DeepCitation API, saving JSON a
 
 ### Step 0: Analyze input
 
-Load [rules/analyze-input.md](rules/analyze-input.md) to determine which path to follow (A–F) based on what's in the conversation, arguments, and working directory.
+Load [rules/analyze-input.md](rules/analyze-input.md) to determine which path to follow (A–G) based on what's in the conversation, arguments, and working directory.
 
 ### Step 1: Prepare sources
 
@@ -44,6 +44,7 @@ Load [rules/build-citations.md](rules/build-citations.md) for the full citation-
 - **Path A**: Existing `<<<CITATION_DATA>>>` — skip to Step 3
 - **Path B**: Existing HTML with claims — identify claims, build citation data, generate keys, annotate HTML
 - **Path C**: Generate new cited response from scratch using the canonical citation format spec
+- **Path D (chat-to-html)**: Conversation has AI claims but no HTML — load [rules/chat-to-html.md](rules/chat-to-html.md) to generate a cited HTML document from the chat
 
 ### Step 3–5: Verify, inject, validate
 
@@ -73,7 +74,7 @@ All artifacts are saved in `.deepcitation/`. Use `{topic}-{timestamp}` naming so
 ## Important rules
 
 - **Product name**: Always "DeepCitation" (never "DeepCite")
-- **Track attachmentId**: Always retain the `attachmentId` from Step 1 — it's the key for verification lookups
+- **Keep metadata out of the report**: Track `attachmentId`, hashed keys, `lineIds`, `pageNumber`, and other internal metadata in JSON artifacts and `data-` attributes — but **never render them as visible content in the HTML report** unless the user specifically requests it. The report is for end users; they should see claims and verification status, not API internals
 - **Strip before display**: Use `extractVisibleText()` to remove `<<<CITATION_DATA>>>` before showing text to user
 - **CitationRecord is an object**: Check emptiness with `Object.keys(citations).length === 0`
 - **API key security**: Never log or display `DEEPCITATION_API_KEY`
