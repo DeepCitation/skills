@@ -1,12 +1,18 @@
-# Chat to HTML — Generate a Cited HTML Response
+# Chat to Verified Output — Generate a Cited Response
 
-Use this path when the conversation contains a chat-style exchange (questions + AI answers) and you need to produce a standalone HTML file with DeepCitation verification. This is common when a user runs `/verify` after a back-and-forth conversation that referenced source documents.
+Use this path when the conversation contains a chat-style exchange (questions + AI answers) and you need to produce a verified output with DeepCitation. This is common when a user runs `/verify` after a back-and-forth conversation that referenced source documents.
 
 ## When does this apply?
 
 - The conversation has AI-generated claims (answers, analysis, summaries) but **no existing HTML output**
 - Source documents were discussed or attached in the conversation
-- The user wants a verifiable, shareable HTML artifact — not just inline text
+
+## Choose the output format
+
+- **HTML** (default for complex reports): Generate a standalone HTML document, then verify, inject, and open. Best when the user wants a shareable artifact or the content has structure (tables, sections, multiple sources).
+- **Markdown with indicators** (for quick Q&A): When the conversation is a short exchange and HTML would be overkill, verify the claims and report results inline with `✓`/`⚠`/`✗` indicators plus a summary table. See [verify-and-inject.md](./verify-and-inject.md) Option 2.
+
+When in doubt, prefer HTML — it provides the richer verification experience with popovers.
 
 ## Workflow
 
@@ -26,7 +32,7 @@ Follow [prepare-sources.md](./prepare-sources.md) for each source document. Ever
 
 Build an HTML document that:
 1. **Presents the claims** in a clean, readable layout (not a raw chat transcript)
-2. **Restructures** the conversation content into a coherent document — group related claims, use headings, and make it presentable as a standalone report
+2. **Restructures** the conversation content into a coherent document — group related claims, use headings, and make it presentable as a standalone report. Do not introduce new claims or rephrase conclusions — present the same claims from the natural response, only reformatted. The content stays the same; only the structure and format change.
 3. **Cites every claim** using the `<<<CITATION_DATA>>>` format from Path C in [build-citations.md](./build-citations.md)
 
 Use the canonical citation format spec:
