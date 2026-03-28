@@ -1,32 +1,30 @@
 # Prepare Sources
 
-Upload **every** source file to the DeepCitation API. Every prepared file enables verification of the claims it backs — skipping a file means those claims go unverified.
+Upload **every** source file to the DeepCitation API. Skipping a file means its claims go unverified.
 
-The response JSON contains the `attachmentId` (needed for verify) and `deepTextPromptPortion` (extracted text with page/line metadata).
-
-## Always use `prepare` — never other content extraction tools
-
-`prepare` is the **only** way to read source content during verification. Do not use OCR tools, PDF readers, or URL fetch/crawl tools to extract source text — their output lacks the `<line id>` and `<page_number>` markup needed for citations. For URLs, always use `npx -y deepcitation prepare <url>` instead of web crawling or fetching tools.
+## CLI usage
 
 ```bash
-# Prepare a local file (PDF, image, DOCX, XLSX, PPTX, CSV, etc.)
+# Local file (PDF, image, DOCX, XLSX, PPTX, CSV, etc.)
 npx -y deepcitation prepare source.pdf
 
-# Prepare a URL (handles rendering + text extraction server-side)
+# URL (rendering + text extraction server-side)
 npx -y deepcitation prepare https://example.com/article
 
 # Custom output path
 npx -y deepcitation prepare report.pdf --out .deepcitation/prepare-report.json
 ```
 
-Output is saved to `.deepcitation/prepare-{name}.json` by default. URLs and Office files take ~30s to process vs <1s for images/PDFs.
+`prepare` is the **only** way to read source content. Do not use OCR tools, PDF readers, or URL fetch — their output lacks the `<line id>` and `<page_number>` markup needed for citations.
 
 ## What to retain
 
-**Save** each prepare response separately — retain both the `attachmentId` and `deepTextPromptPortion`. The `deepTextPromptPortion` is the **sole source of truth** for `lineIds` and `pageNumber` values — read it before building citations.
+Save each response — retain both `attachmentId` and `deepTextPromptPortion`. The `deepTextPromptPortion` is the sole source of truth for `lineIds` and `pageNumber` values. Line IDs are sparse — see [line-ids.md](./line-ids.md).
 
-Always read the `deepTextPromptPortion` before building citations. Line IDs are **sparse** (not every line is tagged) — see [line-ids.md](./line-ids.md).
+## Parallel preparation
+
+When multiple sources exist, launch one Agent subagent per source — all in a single message so they execute concurrently. Each subagent: run prepare, read the output JSON, report back the `attachmentId` and a summary of the content.
 
 ## Inaccessible sources
 
-If a URL is inaccessible (DNS failure, 403, auth required), report it clearly and continue with available sources. Do not fabricate citations for sources you couldn't prepare.
+If a URL fails (DNS, 403, auth required), report it clearly and continue with available sources. Do not fabricate citations for sources you couldn't prepare.
