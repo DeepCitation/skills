@@ -5,7 +5,7 @@
 If the HTML has `[N]` markers, `data-cite="N"` attributes, and a `<<<CITATION_DATA>>>` block, use the one-shot command instead of the steps below:
 
 ```bash
-npx deepcitation verify --html .deepcitation/marked-{timestamp}.html
+npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html
 ```
 
 This handles keygen, annotation, verification (~0.5s), and injection in a single command. The separate steps below are only needed when you require finer control.
@@ -15,7 +15,7 @@ This handles keygen, annotation, verification (~0.5s), and injection in a single
 The CLI handles grouping by `attachmentId` and merging responses automatically:
 
 ```bash
-npx deepcitation verify \
+npx -y deepcitation verify \
   --citations .deepcitation/citations-keyed-{timestamp}.json \
   --out .deepcitation/verify-response-{timestamp}.json
 ```
@@ -40,7 +40,7 @@ When using the separate commands instead of `verify --html`, inject the CDN runt
 This requires an annotated HTML file with `data-citation-key` attributes and a key-map.
 
 ```bash
-npx deepcitation inject \
+npx -y deepcitation inject \
   --html .deepcitation/annotated.html \
   --verify-response .deepcitation/verify-response.json \
   --key-map .deepcitation/key-map.json \
@@ -101,14 +101,13 @@ The user should see claims and their verification status (via the variant/indica
 
 ## Validate before declaring done
 
-Do not tell the user the report is ready until you've checked the resolution chain. Use the timestamped filenames from this run:
+Do not tell the user the report is ready until you've confirmed:
 
-1. Count `data-citation-key` elements in the annotated HTML
-2. Count key-map entries
+1. The output HTML file was produced (check `.deepcitation/` for the latest `*.html`)
+2. Open the HTML and verify `data-citation-key` attributes are present on cited elements
 3. Count verifications and their statuses (found / partial / not_found)
-4. Check for orphans (data-citation-key values with no key-map entry) and missing verifications (key-map entries with no verification result)
 
-If orphans or missing verifications are found, fix them before injecting.
+If using the manual path, also check for orphans (data-citation-key values with no key-map entry) and missing verifications.
 
 **Then open the result:**
 ```bash

@@ -63,7 +63,7 @@ Convert the chat response into a clean HTML document with citation markers. This
 ### 4. Verify (one command)
 
 ```bash
-npx deepcitation verify --html .deepcitation/marked-{timestamp}.html
+npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html
 ```
 
 This single command: parses the citation data, generates deterministic keys, maps `data-cite` attributes to `data-citation-key` hashes, verifies all citations against the API (~0.5s), and injects the CDN runtime. Output: `.deepcitation/cited-{timestamp}.html`
@@ -76,5 +76,5 @@ Open the result for the user.
 - Clean, professional layout — think report, not chat log
 - Group related findings under headings
 - Include a title/header describing the topic
-- Add a citation drawer trigger in the footer or a references section (see [annotate-html.md](./annotate-html.md))
+- Include a references section listing source documents in the footer
 - Ensure all content is visible without JavaScript (the CDN runtime adds verification indicators but the content should be readable without it)

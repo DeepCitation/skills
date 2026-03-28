@@ -1,6 +1,6 @@
 # Analyze Input & Determine What to Verify
 
-**Respond first, verify second**: If the user asked a question or requested analysis alongside `/verify`, you should have already answered it naturally in Phase 1 (see SKILL.md). This step runs in Phase 2, AFTER your natural response is complete.
+**Respond first, verify second**: If the user asked a question or requested analysis alongside `/verify`, you should have already answered it naturally before reaching this step (see SKILL.md §2 Triage). This step runs AFTER your natural response is complete.
 
 **Bias for action**: DO things, don't ask questions. Scan everything available, make a plan, and execute. Only ask the user if you genuinely cannot determine what they want.
 
@@ -18,7 +18,7 @@ Before calling any API, scan all available context:
 
 ## Decision paths
 
-**Check Phase 1 first**: If the user asked a question alongside `/verify` (e.g., "are pets allowed? /verify"), Phase 1 let the conversation develop naturally without intervention. By the time you reach this step, the AI's claims exist in the conversation. Source preparation happens now, as part of Phase 2 — identify the sources that back the claims, then prepare them.
+**Check triage first**: If the user asked a question alongside `/verify` (e.g., "are pets allowed? /verify"), the natural response already happened before this step (see SKILL.md §2 Triage). By the time you reach this step, the AI's claims exist in the conversation. Source preparation happens now — identify the sources that back the claims, then prepare them.
 
 **A) Source files provided as arguments** (`/verify report.pdf quarterly-results.docx`)
 → Prepare these files, generate a cited analysis, verify, and inject.

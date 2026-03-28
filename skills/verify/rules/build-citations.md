@@ -48,47 +48,48 @@ Create a citation record mapping each claim to its source. Each citation must us
 
 For lineIds and pageNumber rules, read [line-ids.md](./line-ids.md).
 
-```json
+For each claim, add `data-cite="N"` to the element containing the claim and `[N]` after the claim text (N is a sequential integer starting from 1). Then append a `<<<CITATION_DATA>>>` block after `</html>`:
+
+```
+<<<CITATION_DATA>>>
 {
-  "cite-revenue": {
-    "fullPhrase": "Revenue grew 45% year-over-year to $2.3B",
-    "anchorText": "$2.3B",
-    "pageNumber": 2,
-    "lineIds": [20],
-    "attachmentId": "ATTACHMENT_ID_FROM_STEP_1"
-  }
+  "ATTACHMENT_ID_FROM_STEP_1": [
+    {
+      "id": 1,
+      "reasoning": "why this source text backs this claim",
+      "full_phrase": "Revenue grew 45% year-over-year to $2.3B",
+      "anchor_text": "$2.3B",
+      "page_id": "page_number_2_index_0",
+      "line_ids": [20]
+    }
+  ]
 }
+<<<END_CITATION_DATA>>>
 ```
 
-Save as `.deepcitation/citations-{timestamp}.json`.
+Save as `.deepcitation/marked-{timestamp}.html`.
 
-**Anchor text guidelines.** Short anchor text (1-2 words) works for structured/tabular data. For narrative prose, use **5+ word** distinctive anchor text. Keep `fullPhrase` to a single line from the deepTextPromptPortion — multi-line values often degrade to `partial_text_found`.
+**Anchor text guidelines.** Short anchor text (1-2 words) works for structured/tabular data. For narrative prose, use **5+ word** distinctive anchor text. Keep `full_phrase` to a single line from the deepTextPromptPortion — multi-line values often degrade to `partial_text_found`.
 
 Examples:
-- **Good** (structured): `fullPhrase: "Revenue grew 45% year-over-year to $2.3B"`, `anchorText: "$2.3B"`
-- **Good** (narrative): `fullPhrase: "The court held that Section 4(b) was unconstitutional"`, `anchorText: "Section 4(b) was unconstitutional"`
-- **Bad** (narrative): `anchorText: "unconstitutional"` — too short, often results in `partial_text_found`
+- **Good** (structured): `full_phrase: "Revenue grew 45% year-over-year to $2.3B"`, `anchor_text: "$2.3B"`
+- **Good** (narrative): `full_phrase: "The court held that Section 4(b) was unconstitutional"`, `anchor_text: "Section 4(b) was unconstitutional"`
+- **Bad** (narrative): `anchor_text: "unconstitutional"` — too short, often results in `partial_text_found`
 
-**anchorText and fullPhrase must be verbatim from the source document (`deepTextPromptPortion`).** The verification API searches the source for these exact strings. **Always cite using source text as anchorText** — even when the HTML displays a different value. The popover shows the user the verification status, surrounding context, and variant matches the API attempted. A ⚠ or ✗ next to a claim is more useful than no indicator at all.
+**`anchor_text` and `full_phrase` must be verbatim from the source document (`deepTextPromptPortion`).** The verification API searches the source for these exact strings. **Always cite using source text as `anchor_text`** — even when the HTML displays a different value. The popover shows the user the verification status, surrounding context, and variant matches the API attempted. A ⚠ or ✗ next to a claim is more useful than no indicator at all.
 
 Never:
-- Set `anchorText` to the HTML's displayed text to force a match — that's fabricating evidence
-- Add interpretive text or annotations near `data-citation-key` elements — the indicator is the sole visual signal
+- Set `anchor_text` to the HTML's displayed text to force a match — that's fabricating evidence
+- Add interpretive text or annotations near cited elements — the popover is the sole visual signal
 - Assume a value in the HTML matches the source without checking the `deepTextPromptPortion`
 
-### 4. Generate deterministic keys
+### 4. Verify
 
 ```bash
-npx deepcitation keygen \
-  --citations .deepcitation/citations-{timestamp}.json \
-  --out .deepcitation/citations-keyed-{timestamp}.json
+npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html
 ```
 
-Use the same `{timestamp}` as the citations file saved in Step 3. This prints the mapping to stderr and writes the re-keyed citations to `citations-keyed-{timestamp}.json`. Use this file for the verify step.
-
-### 5. Annotate HTML and build key map
-
-See [annotate-html.md](./annotate-html.md) for `data-citation-key` placement rules, key-map building, and citation drawer triggers.
+One command handles keygen, annotation, verification, and CDN injection. For finer control over individual steps, see [verify-and-inject.md](./verify-and-inject.md).
 
 ## Path D: Chat to verified output
 
@@ -140,6 +141,6 @@ This is the single source of truth for field rules, format, and examples.
 ```
 
 4. Save as `.deepcitation/marked-{timestamp}.html`
-5. Run `npx deepcitation verify --html .deepcitation/marked-{timestamp}.html`
+5. Run `npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html`
 
 The `verify` command handles the rest — no need to manually extract citations, run keygen, annotate, or inject.

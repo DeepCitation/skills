@@ -93,4 +93,4 @@ For `page_id` and `line_ids` rules, see [line-ids.md](./line-ids.md).
 
 Save as `.deepcitation/marked-{timestamp}.html`
 
-Save then run `npx -y deepcitation verify --html`
+Save then run `npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html`

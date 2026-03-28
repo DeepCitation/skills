@@ -64,7 +64,7 @@ In chat, summarize the results and link to the HTML:
 ## Invariants
 
 - Use `prepare` for ALL source reading — never OCR, PDF readers, or web fetch
-- `fullPhrase` and `anchorText` must be verbatim from the source `deepTextPromptPortion`
+- `full_phrase` and `anchor_text` must be verbatim from the source `deepTextPromptPortion`
 - Every claim, value, or fact from a source document gets a citation — no exceptions
 - Never export API keys, use `--key` flag, or log key values
 - Never render metadata (attachmentId, hashed keys, lineIds) as visible content in the report
