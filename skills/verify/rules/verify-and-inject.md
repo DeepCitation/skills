@@ -1,11 +1,21 @@
 # Verify and Inject
 
-## Verify citations
+## Preferred: `deepcitation verify --html` (one-shot)
+
+If the HTML has `[N]` markers, `data-cite="N"` attributes, and a `<<<CITATION_DATA>>>` block, use the one-shot command instead of the steps below:
+
+```bash
+npx deepcitation verify --html .deepcitation/marked-{timestamp}.html
+```
+
+This handles keygen, annotation, verification (~0.5s), and injection in a single command. The separate steps below are only needed when you require finer control.
+
+## Verify citations (manual path)
 
 The CLI handles grouping by `attachmentId` and merging responses automatically:
 
 ```bash
-npx -y deepcitation verify \
+npx deepcitation verify \
   --citations .deepcitation/citations-keyed-{timestamp}.json \
   --out .deepcitation/verify-response-{timestamp}.json
 ```
@@ -14,18 +24,23 @@ Use the same `{timestamp}` as the rest of this run's artifacts. Contains verific
 
 Also save the extracted citations as `.deepcitation/citations-{timestamp}.json` — the `CitationRecord` (object keyed by citation key, NOT an array).
 
-## Deliver results — HTML or markdown
+## Deliver results — always HTML
 
-After verification completes, deliver results in the appropriate format (see SKILL.md "Final deliverable" for when to use which):
+After verification completes, the HTML file with injected CDN runtime is the deliverable. In chat, summarize the results and link to the HTML file for inspection:
 
-### Option 1: Inject into HTML (preferred)
+```
+12/14 citations verified ✓ · 2 partial ⚠
+→ .deepcitation/verified-{timestamp}.html
+```
 
-When an HTML artifact exists or was generated, inject the CDN runtime to produce the final deliverable.
+### Manual inject (fine control only)
 
-This requires an annotated HTML file with `data-citation-key` attributes and a key-map. If you don't have these yet, go back to [annotate-html.md](./annotate-html.md) and build them first.
+When using the separate commands instead of `verify --html`, inject the CDN runtime manually.
+
+This requires an annotated HTML file with `data-citation-key` attributes and a key-map.
 
 ```bash
-npx -y deepcitation inject \
+npx deepcitation inject \
   --html .deepcitation/annotated.html \
   --verify-response .deepcitation/verify-response.json \
   --key-map .deepcitation/key-map.json \
@@ -78,33 +93,6 @@ After running `inject`, edit the auto-init `<script>` in the output HTML:
 
 Pick the variant and indicator that best match the report's style. If unsure, `text` + `icon` (the defaults) work well for most reports.
 
-### Option 2: Markdown with inline indicators (fallback)
-
-When the context is pure chat/markdown with no HTML artifact, report verification results inline. After running `npx -y deepcitation verify`, parse `verify-response.json` and present results as:
-
-1. **Inline indicators** — restate each claim with a status indicator:
-   - `✓` — `found` (exact match in source)
-   - `⚠` — `partial_text_found`, `found_anchor_text_only`, or `found_on_other_page`
-   - `✗` — `not_found`
-
-   Example:
-   ```
-   Revenue grew 45% year-over-year to $2.3B ✓
-   The company plans to expand into 12 new markets ✗
-   Operating margin improved to 28.5% ⚠ (found on different page)
-   ```
-
-2. **Citation status summary** — end with a table:
-   ```
-   | # | Claim | Status | Source | Page |
-   |---|-------|--------|--------|------|
-   | 1 | Revenue grew 45% YoY to $2.3B | ✓ found | quarterly-results.pdf | 2 |
-   | 2 | Expand into 12 new markets | ✗ not_found | quarterly-results.pdf | — |
-   | 3 | Operating margin improved to 28.5% | ⚠ found_on_other_page | quarterly-results.pdf | 5→8 |
-   ```
-
-This format gives the user full visibility into what was verified and what wasn't, without requiring an HTML artifact.
-
 ## Keep metadata out of the report
 
 The HTML report is for end users. **Never render internal metadata as visible content** — this includes `attachmentId`, hashed citation keys, `lineIds`, `pageNumber`, `page_id`, and raw JSON structures. These belong in JSON artifacts and `data-` attributes only.
@@ -130,13 +118,7 @@ ls -t .deepcitation/*.html | head -1 | xargs xdg-open  # Linux
 
 ## Mandatory completion — no silent exits
 
-Every `/verify` invocation MUST reach this file and produce output. If you find cached `.deepcitation/prepare-*.json` files, that does NOT mean verification is complete — `prepare` only extracts content. You must still:
-
-1. Build citations (Step 2)
-2. Run `npx -y deepcitation verify` (this step)
-3. Deliver results — inject into HTML (Option 1) or output markdown with indicators (Option 2)
-
-Never exit silently or assume cached artifacts mean the job is done. If HTML injection fails for any reason, fall back to Option 2 (markdown with inline indicators and summary table).
+Every `/verify` invocation MUST produce an HTML artifact. In chat, summarize results and link to the file. Never exit silently.
 
 ## Verification status reference
 

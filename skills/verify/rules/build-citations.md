@@ -79,7 +79,7 @@ Never:
 ### 4. Generate deterministic keys
 
 ```bash
-npx -y deepcitation keygen \
+npx deepcitation keygen \
   --citations .deepcitation/citations-{timestamp}.json \
   --out .deepcitation/citations-keyed-{timestamp}.json
 ```
@@ -92,7 +92,13 @@ See [annotate-html.md](./annotate-html.md) for `data-citation-key` placement rul
 
 ## Path D: Chat to verified output
 
-Load [chat-to-html.md](./chat-to-html.md). This path handles chat-only conversations — do not duplicate its logic here.
+Load [chat-to-html.md](./chat-to-html.md). The agent clones chat content into HTML with `[N]` markers, `data-cite="N"` attributes, and `<<<CITATION_DATA>>>`, then runs `deepcitation verify` which handles keygen + verify + inject in one shot.
+
+**Path D vs Path C:**
+- **Path D**: Content already exists (prior chat, existing HTML). Clone it, mark claims, run `verify`. Never alter the original claim text — only add markers and restructure layout.
+- **Path C**: New content from scratch. The LLM generates inline with markers (same format, but part of the generation, not post-hoc).
+
+Both paths use the same `[N]` + `<<<CITATION_DATA>>>` format. Both end with `deepcitation verify` for the mechanical pipeline.
 
 ## Path C: Generate new cited response from scratch
 
@@ -107,7 +113,8 @@ This is the single source of truth for field rules, format, and examples.
 
 1. Read the `deepTextPromptPortion` from the saved prepare JSON
 2. Read the citation format spec from the deepcitation package (see above)
-3. Generate your response with:
+3. Generate your response as HTML with:
+   - `data-cite="N"` on elements containing claims
    - `[N]` markers after each claim sourced from the documents — **every claim, value, or fact from attachments gets a sequential integer marker like [1], [2], [3] at the end of the claim. Each distinct piece of information needs its own unique marker number.**
    - A `<<<CITATION_DATA>>>` block at the end with structured citation metadata grouped by `attachmentId`
 
@@ -122,8 +129,8 @@ This is the single source of truth for field rules, format, and examples.
     {
       "id": 1,
       "reasoning": "why this citation is correct",
-      "fullPhrase": "exact verbatim quote from source",
-      "anchorText": "1-3 key words from the phrase",
+      "full_phrase": "exact verbatim quote from source",
+      "anchor_text": "1-3 key words from the phrase",
       "page_id": "page_number_N_index_I",
       "line_ids": [LINE_NUMBER]
     }
@@ -132,9 +139,7 @@ This is the single source of truth for field rules, format, and examples.
 <<<END_CITATION_DATA>>>
 ```
 
-Save the full output (including the citation data block):
-```bash
-cat > .deepcitation/llm-output.txt << 'ENDOFOUTPUT'
-... your generated response here ...
-ENDOFOUTPUT
-```
+4. Save as `.deepcitation/marked-{timestamp}.html`
+5. Run `npx deepcitation verify --html .deepcitation/marked-{timestamp}.html`
+
+The `verify` command handles the rest — no need to manually extract citations, run keygen, annotate, or inject.

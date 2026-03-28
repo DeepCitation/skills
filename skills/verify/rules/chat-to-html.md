@@ -1,4 +1,4 @@
-# Chat to Verified Output — Generate a Cited Response
+# Chat to Verified Output — Clone and Cite
 
 Use this path when the conversation contains a chat-style exchange (questions + AI answers) and you need to produce a verified output with DeepCitation. This is common when a user runs `/verify` after a back-and-forth conversation that referenced source documents.
 
@@ -7,12 +7,9 @@ Use this path when the conversation contains a chat-style exchange (questions + 
 - The conversation has AI-generated claims (answers, analysis, summaries) but **no existing HTML output**
 - Source documents were discussed or attached in the conversation
 
-## Choose the output format
+## Output
 
-- **HTML** (default for complex reports): Generate a standalone HTML document, then verify, inject, and open. Best when the user wants a shareable artifact or the content has structure (tables, sections, multiple sources).
-- **Markdown with indicators** (for quick Q&A): When the conversation is a short exchange and HTML would be overkill, verify the claims and report results inline with `✓`/`⚠`/`✗` indicators plus a summary table. See [verify-and-inject.md](./verify-and-inject.md) Option 2.
-
-When in doubt, prefer HTML — it provides the richer verification experience with popovers.
+Always produce an HTML file — even for quick chat Q&A. In chat, summarize the results and link to the HTML for inspection.
 
 ## Workflow
 
@@ -26,36 +23,52 @@ If sources are ambiguous (e.g. the user mentioned a document but didn't attach i
 
 ### 2. Prepare all sources
 
-Follow [prepare-sources.md](./prepare-sources.md) for each source document. Every source must be prepared — skipping one means its claims go unverified.
+Follow [prepare-sources.md](./prepare-sources.md) for each source document. Every source must be prepared — skipping one means its claims go unverified. Use parallel preparation when multiple sources exist.
 
-### 3. Generate cited HTML
+### 3. Clone content into cited HTML
 
-Build an HTML document that:
-1. **Presents the claims** in a clean, readable layout (not a raw chat transcript)
-2. **Restructures** the conversation content into a coherent document — group related claims, use headings, and make it presentable as a standalone report. Do not introduce new claims or rephrase conclusions — present the same claims from the natural response, only reformatted. The content stays the same; only the structure and format change.
-3. **Cites every claim** using the `<<<CITATION_DATA>>>` format from Path C in [build-citations.md](./build-citations.md)
+Convert the chat response into a clean HTML document with citation markers. This is the same `[N]` + `<<<CITATION_DATA>>>` format used by `citationPrompts.ts` — one pattern for everything.
 
-Use the canonical citation format spec:
+1. **Structure**: Wrap in a self-contained HTML document with inline styles. Restructure the conversation content into a coherent document — group related claims under headings, use tables where appropriate. Do **not** change the words of any claim — present the same claims from the natural response, only reformatted. The content stays the same; only the structure and format change.
+
+2. **Mark claims**: For each factual claim sourced from an attachment:
+   - Add `data-cite="N"` to the element containing the claim
+   - Add `[N]` after the claim text
+
+   Where N is a sequential integer starting from 1. Every distinct piece of information needs its own unique marker number.
+
+3. **Append citation data**: At the end of the file (after `</html>`), add the citation block grouped by `attachmentId`:
+
+   ```
+   <<<CITATION_DATA>>>
+   {
+     "ATTACHMENT_ID_FROM_PREPARE": [
+       {
+         "id": 1,
+         "reasoning": "why this source text backs this claim",
+         "full_phrase": "verbatim quote from deepTextPromptPortion",
+         "anchor_text": "1-3 key words from full_phrase",
+         "page_id": "page_number_N_index_I",
+         "line_ids": [LINE_ID]
+       }
+     ]
+   }
+   <<<END_CITATION_DATA>>>
+   ```
+
+   Follow the CoT ordering: `reasoning` first (think WHY before WHAT), then `full_phrase` (verbatim from source), then `anchor_text` (extracted from full_phrase). For `page_id` and `line_ids`, see [line-ids.md](./line-ids.md).
+
+4. **Save** as `.deepcitation/marked-{timestamp}.html`
+
+### 4. Verify (one command)
+
 ```bash
-DC_ROOT="$(node -e "console.log(require('path').resolve(require('path').dirname(require.resolve('deepcitation')), '..'))")"
-cat "$DC_ROOT/docs/prompts/citation-format.md"
+npx deepcitation verify --html .deepcitation/marked-{timestamp}.html
 ```
 
-Every factual claim gets a `[N]` marker and a corresponding entry in the `<<<CITATION_DATA>>>` block. Think out loud for each citation — reason about which document, page, and line supports the claim.
+This single command: parses the citation data, generates deterministic keys, maps `data-cite` attributes to `data-citation-key` hashes, verifies all citations against the API (~0.5s), and injects the CDN runtime. Output: `.deepcitation/cited-{timestamp}.html`
 
-### 4. Extract citations, generate keys, annotate
-
-After generating the HTML with `<<<CITATION_DATA>>>`:
-
-1. **Parse** the `<<<CITATION_DATA>>>` block into a `CitationRecord` object
-2. **Save** as `.deepcitation/citations-{timestamp}.json`
-3. **Generate keys**: `npx -y deepcitation keygen --citations .deepcitation/citations-{timestamp}.json`
-4. **Annotate** the HTML with `data-citation-key` attributes per [annotate-html.md](./annotate-html.md)
-5. **Build the key map** per [annotate-html.md](./annotate-html.md)
-
-### 5. Verify and inject
-
-Follow [verify-and-inject.md](./verify-and-inject.md) to verify all citations, inject the CDN runtime, and validate before delivering.
+Open the result for the user.
 
 ## HTML structure guidelines
 
