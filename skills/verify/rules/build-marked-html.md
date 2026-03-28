@@ -63,6 +63,19 @@ Examples:
 
 `anchor_text` and `full_phrase` must be **verbatim from the source document** (`deepTextPromptPortion`). The verification API searches for these exact strings. Never set `anchor_text` to the HTML's displayed text to force a match -- that is fabricating evidence.
 
+The HTML element's text content acts as the display label — it can differ from `anchor_text`. The CDN runtime (`window.DeepCitationPopover.init()`) binds to `data-citation-key` attributes and does not compare the element text against `anchor_text`. Only the verification API uses `anchor_text` for source matching.
+
+Example: a source says `"$0.00"` but your HTML displays "Free":
+
+```html
+<span data-cite="3">Free [3]</span>
+```
+```json
+{ "id": 3, "anchor_text": "$0.00", "full_phrase": "Base plan is $0.00 per month" }
+```
+
+`anchor_text` stays verbatim (`"$0.00"`) while the HTML shows whatever is clearest to the reader.
+
 ## 5. Append citation data
 
 After `</html>`, add the citation block grouped by `attachmentId`:
