@@ -69,12 +69,12 @@ For each claim, add `data-cite="N"` to the element containing the claim and `[N]
 
 Save as `.deepcitation/marked-{timestamp}.html`.
 
-**Anchor text guidelines.** Short anchor text (1-2 words) works for structured/tabular data. For narrative prose, use **5+ word** distinctive anchor text. Keep `full_phrase` to a single line from the deepTextPromptPortion — multi-line values often degrade to `partial_text_found`.
+**Anchor text guidelines.** Use 1-3 key words from `full_phrase` — enough to locate the claim, not a full sentence. Keep `full_phrase` to a single line from the deepTextPromptPortion — multi-line values often degrade to `partial_text_found`.
 
 Examples:
-- **Good** (structured): `full_phrase: "Revenue grew 45% year-over-year to $2.3B"`, `anchor_text: "$2.3B"`
-- **Good** (narrative): `full_phrase: "The court held that Section 4(b) was unconstitutional"`, `anchor_text: "Section 4(b) was unconstitutional"`
-- **Bad** (narrative): `anchor_text: "unconstitutional"` — too short, often results in `partial_text_found`
+- **Good**: `full_phrase: "Revenue grew 45% year-over-year to $2.3B"`, `anchor_text: "$2.3B"`
+- **Good**: `full_phrase: "The court held that Section 4(b) was unconstitutional"`, `anchor_text: "Section 4(b)"`
+- **Bad**: `anchor_text: "unconstitutional"` — too generic, often results in `partial_text_found`
 
 **`anchor_text` and `full_phrase` must be verbatim from the source document (`deepTextPromptPortion`).** The verification API searches the source for these exact strings. **Always cite using source text as `anchor_text`** — even when the HTML displays a different value. The popover shows the user the verification status, surrounding context, and variant matches the API attempted. A ⚠ or ✗ next to a claim is more useful than no indicator at all.
 

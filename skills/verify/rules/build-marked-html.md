@@ -52,13 +52,12 @@ Place on the **most specific** element containing the claim:
 
 ### Anchor text rules
 
-- **Structured/tabular data**: short anchor text (1-3 words) is fine
-- **Narrative prose**: use **5+ word** distinctive anchor text
+- **Anchor text**: 1-3 key words from `full_phrase` — enough to locate the claim, not a full sentence
 
 Examples:
-- Good (structured): `full_phrase: "Revenue grew 45% year-over-year to $2.3B"`, `anchor_text: "$2.3B"`
-- Good (narrative): `full_phrase: "The court held that Section 4(b) was unconstitutional"`, `anchor_text: "Section 4(b) was unconstitutional"`
-- Bad (narrative): `anchor_text: "unconstitutional"` -- too short, often results in `partial_text_found`
+- Good: `full_phrase: "Revenue grew 45% year-over-year to $2.3B"`, `anchor_text: "$2.3B"`
+- Good: `full_phrase: "The court held that Section 4(b) was unconstitutional"`, `anchor_text: "Section 4(b)"`
+- Bad: `anchor_text: "unconstitutional"` -- too generic, often results in `partial_text_found`
 
 ### Verbatim quote requirement
 
