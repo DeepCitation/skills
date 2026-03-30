@@ -10,6 +10,14 @@ npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html
 
 This handles keygen, annotation, verification (~0.5s), and injection in a single command. The separate steps below are only needed when you require finer control.
 
+## Pipeline invariants (manual path)
+
+If using separate commands instead of `verify --html`:
+
+1. **Run keygen exactly once**, on the final complete citations.json. Running it twice with different inputs produces inconsistent hashes.
+2. **Never use array indices as keys.** If dc-data has keys `"0"`, `"1"`, `"2"`, keygen was skipped — those are array indices, not citation keys. Keys must be 16-char hex strings from the keygen SHA-1 algorithm.
+3. **Sequence is non-negotiable:** citations → keygen → annotate → verify → inject. Skipping or reordering breaks the key chain and no popovers will render.
+
 ## Verify citations (manual path)
 
 The CLI handles grouping by `attachmentId` and merging responses automatically:
