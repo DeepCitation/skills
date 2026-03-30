@@ -41,23 +41,48 @@ N is a sequential integer starting from 1. Every distinct piece of information g
 
 ### `data-cite="N"` placement rules
 
-Place on the **most specific** element containing the claim:
+**The attributed element must be inline.** The CDN runtime applies `display: inline-flex` to cited elements and appends a status indicator as a child. If placed on a block element, the indicator lands at the far right of the block instead of beside the anchor text.
 
-- **Single value** (`<span>$2.3B</span>`) -- directly on the value element
-- **Value + label** (`Revenue: $2.3B`) -- on the value element, not the label
-- **Compound claim** (`Revenue grew 45% to $2.3B`) -- on the container holding the full claim
-- **Table cells** -- on the `<td>` with the verifiable value
-- **List items** -- on the `<li>` or inline element wrapping the claim
-- **Never** on wrapper/layout elements (`<div class="card">`, `<section>`)
+Wrap the **anchor text** in an inline `<span>` — never attribute a block element:
 
-### Anchor text rules
+```html
+<!-- ✓ Correct: span wraps the anchor text inside the paragraph -->
+<p>Revenue grew <span data-cite="1">45% year-over-year</span> to $2.3B. [1]</p>
 
-- **Anchor text**: 1-3 key words from `full_phrase` — enough to locate the claim, not a full sentence
+<!-- ✕ Wrong: attribute on the paragraph -->
+<p data-cite="1">Revenue grew 45% year-over-year to $2.3B. [1]</p>
+```
 
-Examples:
-- Good: `full_phrase: "Revenue grew 45% year-over-year to $2.3B"`, `anchor_text: "$2.3B"`
-- Good: `full_phrase: "The court held that Section 4(b) was unconstitutional"`, `anchor_text: "Section 4(b)"`
-- Bad: `anchor_text: "unconstitutional"` -- too generic, often results in `partial_text_found`
+- **Existing inline element** (`<span>$2.3B</span>`) -- add `data-cite` directly
+- **Text inside a block** -- wrap the anchor text in `<span data-cite="N">`
+- **Table cells** -- wrap the anchor text inside the `<td>` in a `<span>`
+- **List items** -- wrap the anchor text inside the `<li>` in a `<span>`
+- **Never** on block/layout elements (`<div>`, `<p>`, `<td>`, `<li>`, `<section>`)
+
+### Anchor text — concise label, not a summary
+
+`anchor_text` serves two purposes:
+1. **Verification**: The API searches the source for this exact string
+2. **UI label**: Users see it as the clickable citation label — it should reward a click with deeper context, not repeat what's already visible
+
+**Hard constraints:**
+- Maximum 4 words / 40 characters
+- Must be a verbatim substring of `full_phrase`
+- Must be the most specific, information-dense fragment (a number, proper noun, percentage, date, statute section — not generic verbs or adjectives)
+
+**The progressive disclosure test:** If the user can already see the claim on the page, `anchor_text` should be the part that makes them curious — "where exactly does this come from?" A good `anchor_text` is a keyhole into the source document.
+
+| Quality | `full_phrase` | `anchor_text` | Why |
+|---------|-------------|--------------|-----|
+| Good | "Revenue grew 45% year-over-year to $2.3B" | `$2.3B` | Specific number — click reveals source context |
+| Good | "The court held that Section 4(b) was unconstitutional" | `Section 4(b)` | Legal reference — click shows the court's reasoning |
+| Good | "Recommended daily sodium intake is 2,300 mg" | `2,300 mg` | Precise value — click reveals the guideline source |
+| Good | "Form 1040 Schedule C line 31" | `Schedule C line 31` | Specific form reference |
+| Bad | "Revenue grew 45% year-over-year to $2.3B" | `Revenue grew 45% year-over-year to $2.3B` | Repeats full_phrase — adds nothing |
+| Bad | same | `unconstitutional` | Too generic — appears in many contexts |
+| Bad | same | `the revenue was about two point three billion` | Paraphrased — not verbatim, will fail API match |
+
+**If `anchor_text` exceeds 40 characters or 4 words, shorten it.** Find the most distinctive substring.
 
 ### Verbatim quote requirement
 
@@ -88,7 +113,7 @@ After `</html>`, add the citation block grouped by `attachmentId`:
       "id": 1,
       "reasoning": "why this source text backs this claim",
       "full_phrase": "verbatim quote from deepTextPromptPortion",
-      "anchor_text": "key words from full_phrase",
+      "anchor_text": "most specific ≤4-word substring",
       "page_id": "page_number_N_index_I",
       "line_ids": [LINE_NUMBER]
     }
@@ -101,7 +126,35 @@ Field order: `reasoning` first (think WHY before WHAT), then `full_phrase`, then
 
 For `page_id` and `line_ids` rules, see [line-ids.md](./line-ids.md).
 
-## 6. Save and verify
+### Source download URLs
+
+For each attachment group in the citation data, include the source's download URL so the verified report can offer a download button in the popover header:
+
+- **URL sources** prepared with `deepcitation prepare <url>`: use the original URL
+- **Local file sources**: omit (no remote URL available)
+
+The `verify` command propagates `downloadUrl` into the verification response per-citation. The CDN popover header shows a download icon (revealed on hover) when a download URL is present.
+
+## 6. Citation drawer trigger
+
+Place an empty `<div data-dc-drawer-trigger></div>` where readers should be able to browse all citations (footer, sources section, sidebar). The CDN runtime renders a `CitationDrawerTrigger` (status icons + source label + chevron) into it automatically.
+
+```html
+<!-- Place near the end of the report, before </body> -->
+<div data-dc-drawer-trigger></div>
+```
+
+No `onclick`, no inline styles, no button markup needed — the CDN handles everything.
+
+**Where to place it** — use your judgement:
+- **Bottom of page / footer area**: after the last content section
+- **Sidebar / navigation area**: within the nav section
+- **Tab content area** (e.g. "All Files" tab): at top or bottom of the tab content
+- **Source/reference sections**: beside or within bibliography/sources areas
+
+Multiple containers are supported — each renders its own trigger.
+
+## 7. Save and verify
 
 Save as `.deepcitation/marked-{timestamp}.html`
 

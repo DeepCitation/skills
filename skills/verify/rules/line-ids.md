@@ -1,5 +1,13 @@
 # Line IDs and Page Numbers
 
+## pageNumber is REQUIRED
+
+Every document citation MUST include `pageNumber`. Extract it from the `<page_number_N_index_I>` tag enclosing your cited text — use N (the page number), not I (the index).
+
+**If you omit pageNumber, the API rejects the ENTIRE batch** — all citations for that attachment return `not_found`. This is not a soft degradation; it's a total failure. (Round 2 QA: 39/39 citations returned `not_found` because pageNumber was missing.)
+
+---
+
 `lineIds` and `pageNumber` come from the `deepTextPromptPortion` returned by the prepare step.
 
 ## How line IDs work

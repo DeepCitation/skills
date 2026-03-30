@@ -70,5 +70,7 @@ In chat, summarize the results and link to the HTML:
 - Never render metadata (attachmentId, hashed keys, lineIds) as visible content in the report
 - Always "DeepCitation" (never "DeepCite")
 - Always produce an HTML artifact — never exit without one
+- **Anchor text quality**: `anchor_text` must be ≤ 4 words / 40 chars, a verbatim substring of `full_phrase`, and the most specific fragment (number, proper noun, statute section). It's both an API search term and the user's clickable label — keep it concise.
+- **Model quality**: Smaller models (haiku-class) commonly produce `anchor_text` that is too long or paraphrased. After building citations, validate every `anchor_text`. Prefer `verify --html` (one-shot) to avoid manual keygen pipeline errors.
 
 ARGUMENTS: $ARGUMENTS
