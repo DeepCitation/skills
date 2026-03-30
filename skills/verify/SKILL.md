@@ -161,8 +161,6 @@ npx -y deepcitation verify --html .deepcitation/existing-report.html
 
 ### Report results
 
-### Validate before declaring done
-
 1. Confirm the output HTML file exists in `.deepcitation/`
 2. Count verification statuses (`found` / `partial_text_found` / `not_found`)
 3. Summarize in chat with status indicators:
