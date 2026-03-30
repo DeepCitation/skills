@@ -58,7 +58,7 @@ Always produces an HTML file with interactive popovers.
 
 In chat, summarize the results and link to the HTML:
 ```
-12/14 verified ✓ · 2 partial ⚠ → .deepcitation/verified-{ts}.html
+12/14 verified **✓** · 2 partial ✓ → .deepcitation/verified-{ts}.html
 ```
 
 ## Invariants

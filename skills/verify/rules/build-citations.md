@@ -95,7 +95,7 @@ Save as `.deepcitation/marked-{timestamp}.html`.
 
 Keep `full_phrase` to a single line from the `deepTextPromptPortion` — multi-line values often degrade to `partial_text_found`.
 
-**`anchor_text` and `full_phrase` must be verbatim from the source document (`deepTextPromptPortion`).** The verification API searches the source for these exact strings. **Always cite using source text as `anchor_text`** — even when the HTML displays a different value. The popover shows the user the verification status, surrounding context, and variant matches the API attempted. A ⚠ or ✗ next to a claim is more useful than no indicator at all.
+**`anchor_text` and `full_phrase` must be verbatim from the source document (`deepTextPromptPortion`).** The verification API searches the source for these exact strings. **Always cite using source text as `anchor_text`** — even when the HTML displays a different value. The popover shows the user the verification status, surrounding context, and variant matches the API attempted. A ✓ (partial) or ✗ next to a claim is more useful than no indicator at all.
 
 Never:
 - Set `anchor_text` to the HTML's displayed text to force a match — that's fabricating evidence
