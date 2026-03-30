@@ -37,7 +37,7 @@ When you invoke `/verify`, the skill:
 4. **Verifies** each citation against the original document
 5. **Delivers** results as either:
    - An interactive HTML file with clickable citation popovers, or
-   - Inline markdown with `✓`/`⚠`/`✗` indicators and a status summary table
+   - Inline markdown with **✓** (verified) / ✓ (partial match) / ✗ (not found) indicators and a status summary table
 
 ## Related
 

@@ -37,7 +37,7 @@ Also save the extracted citations as `.deepcitation/citations-{timestamp}.json` 
 After verification completes, the HTML file with injected CDN runtime is the deliverable. In chat, summarize the results and link to the HTML file for inspection:
 
 ```
-12/14 citations verified ✓ · 2 partial ⚠
+12/14 citations verified **✓** · 2 partial ✓
 → .deepcitation/verified-{timestamp}.html
 ```
 
@@ -131,8 +131,8 @@ Every `/verify` invocation MUST produce an HTML artifact. In chat, summarize res
 
 | Status | Display | Meaning |
 |--------|---------|---------|
-| `found` | ✓ Verified | Exact match in source |
-| `partial_text_found` | ⚠ Partial | Full phrase found, anchor text missed |
-| `found_anchor_text_only` | ⚠ Partial | Only anchor text matched |
-| `found_on_other_page` | ⚠ Partial | Found on different page |
+| `found` | **✓** Verified | Exact match in source |
+| `partial_text_found` | ✓ Partial | Full phrase found, anchor text missed |
+| `found_anchor_text_only` | ✓ Partial | Only anchor text matched |
+| `found_on_other_page` | ✓ Partial | Found on different page |
 | `not_found` | ✗ Not Found | Could not verify |
