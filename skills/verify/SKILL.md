@@ -11,6 +11,20 @@ it verifies what was naturally produced, never shapes content creation.
 
 Three steps: **Prepare → Write → Verify**.
 
+## 0. Triage
+
+Scan `$ARGUMENTS`, conversation history, and working directory:
+
+| Situation | Action |
+|-----------|--------|
+| `[N]` markers + `<<<CITATION_DATA>>>` already exist (in HTML) | Ensure sources are prepared → `verify --html` (skip Steps 1–2) |
+| HTML/content exists with claims but no citation markers | Prepare sources → write cited markdown from the claims → `verify --markdown` |
+| `/verify` invoked with a question | Answer naturally first → prepare sources → write cited markdown → `verify --markdown` |
+| Chat Q&A exists, no HTML | Extract claims from conversation → prepare sources → write cited markdown → `verify --markdown` |
+| Nothing to verify | Exit gracefully — tell the user no verifiable content was found |
+
+If multiple sources are present, prepare ALL of them — each produces a separate `attachmentId`.
+
 ## 1. Authenticate + Prepare Sources
 
 ### Auth
@@ -51,7 +65,7 @@ If a URL fails (DNS, 403, auth required), report it clearly and continue with av
 
 Write a **markdown** file with `[N]` citation markers and a `<<<CITATION_DATA>>>` JSON block at the end. Save as `.deepcitation/draft-{timestamp}.md`.
 
-The CLI handles all HTML conversion, styling, `data-cite` attribute wrapping, progressive disclosure structure, keygen, annotation, and CDN injection. You just write markdown with citations.
+The CLI handles all HTML conversion, styling, `data-cite` attribute wrapping, `data-citation-key` annotation, citation drawer trigger insertion, progressive disclosure structure, keygen, and CDN injection. You just write markdown with citations — no manual HTML annotation needed.
 
 ### What to write
 
@@ -69,6 +83,12 @@ The CLI supports two styles via `--style`:
 ### Citation rules
 
 **Every claim, value, or fact from source documents gets a citation.** If a human would need to open a source to verify it, cite it.
+
+**Common blind spots:**
+- Hidden/collapsed content (accordions, toggles, `display:none` panels)
+- Restated values in summaries, banners, or narrative that repeat a value from elsewhere
+- Metadata: dates, identifiers, report timestamps in headers/footers
+- All views: tabs, timelines, alternate panels — walk every view, not just the default
 
 For each cited claim, add `[N]` after the claim text (N is sequential starting from 1):
 
@@ -103,7 +123,7 @@ Shorthand keys save tokens: `n`=id, `r`=reasoning, `f`=full_phrase, `k`=anchor_t
 - **full_phrase**: Copy text **verbatim** from the source `deepTextPromptPortion`. Keep to a single line — multi-line values degrade to `partial_text_found`.
 - **anchor_text**: The 1-4 most important words from `full_phrase`. Must be a verbatim substring. Max 4 words / 40 chars. Pick the most specific fragment (number, proper noun, percentage, statute section). This is both an API search term and the user's clickable label.
 - **page_id**: From `<page_number_N_index_I>` tags in `deepTextPromptPortion`. Use format `page_number_N_index_I`.
-- **line_ids**: From `<line id="N">` tags in `deepTextPromptPortion`. IDs are **sparse and non-sequential**. Use the nearest tagged line. If text spans multiple tagged lines, include all.
+- **line_ids**: From `<line id="N">` tags in `deepTextPromptPortion`. IDs are **sparse and non-sequential** — they handle columns, tables, and non-linear layouts. Use the nearest tagged line. If text spans multiple tagged lines, include all. An incorrect line ID degrades verification from `found` to `partial_text_found` (page-level fallback).
 
 **pageNumber is REQUIRED** — omitting it causes the API to reject the entire batch for that attachment.
 
@@ -141,9 +161,13 @@ npx -y deepcitation verify --html .deepcitation/existing-report.html
 
 ### Report results
 
-In chat, summarize the results and link to the HTML:
+### Validate before declaring done
+
+1. Confirm the output HTML file exists in `.deepcitation/`
+2. Count verification statuses (`found` / `partial_text_found` / `not_found`)
+3. Summarize in chat with status indicators:
 ```
-12/14 verified · 2 partial → .deepcitation/verified-{ts}.html
+12/14 verified **✓** · 2 partial ✓ → .deepcitation/verified-{ts}.html
 ```
 
 Always produce an HTML artifact — never exit without one.
@@ -153,6 +177,8 @@ Always produce an HTML artifact — never exit without one.
 - Use `prepare` for ALL source reading — never OCR, PDF readers, or web fetch
 - `full_phrase` and `anchor_text` must be verbatim from the source `deepTextPromptPortion`
 - Every claim, value, or fact from a source document gets a citation — no exceptions
+- **Anchor text quality**: `anchor_text` must be ≤ 4 words / 40 chars, a verbatim substring of `full_phrase`, and the most specific fragment (number, proper noun, statute section). It's both an API search term and the user's clickable label — keep it concise.
+- **Model quality**: Smaller models (haiku-class) commonly produce `anchor_text` that is too long or paraphrased. After building citations, validate every `anchor_text`.
 - Never export API keys, use `--key` flag, or log key values
 - Never render metadata (attachmentId, hashed keys, lineIds) as visible content
 - Always "DeepCitation" (never "DeepCite")
