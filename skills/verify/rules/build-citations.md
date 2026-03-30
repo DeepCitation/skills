@@ -150,7 +150,7 @@ This is the single source of truth for field rules, format, and examples.
       "id": 1,
       "reasoning": "why this citation is correct",
       "full_phrase": "exact verbatim quote from source",
-      "anchor_text": "1-3 key words from the phrase",
+      "anchor_text": "most specific ≤4-word substring",
       "page_id": "page_number_N_index_I",
       "line_ids": [LINE_NUMBER]
     }

@@ -77,6 +77,7 @@ Wrap the **anchor text** in an inline `<span>` — never attribute a block eleme
 | Good | "Revenue grew 45% year-over-year to $2.3B" | `$2.3B` | Specific number — click reveals source context |
 | Good | "The court held that Section 4(b) was unconstitutional" | `Section 4(b)` | Legal reference — click shows the court's reasoning |
 | Good | "Recommended daily sodium intake is 2,300 mg" | `2,300 mg` | Precise value — click reveals the guideline source |
+| Good | "Form 1040 Schedule C line 31" | `Schedule C line 31` | Specific form reference |
 | Bad | "Revenue grew 45% year-over-year to $2.3B" | `Revenue grew 45% year-over-year to $2.3B` | Repeats full_phrase — adds nothing |
 | Bad | same | `unconstitutional` | Too generic — appears in many contexts |
 | Bad | same | `the revenue was about two point three billion` | Paraphrased — not verbatim, will fail API match |
@@ -112,7 +113,7 @@ After `</html>`, add the citation block grouped by `attachmentId`:
       "id": 1,
       "reasoning": "why this source text backs this claim",
       "full_phrase": "verbatim quote from deepTextPromptPortion",
-      "anchor_text": "key words from full_phrase",
+      "anchor_text": "most specific ≤4-word substring",
       "page_id": "page_number_N_index_I",
       "line_ids": [LINE_NUMBER]
     }
@@ -142,6 +143,14 @@ Place an empty `<div data-dc-drawer-trigger></div>` where readers should be able
 <!-- Place near the end of the report, before </body> -->
 <div data-dc-drawer-trigger></div>
 ```
+
+No `onclick`, no inline styles, no button markup needed — the CDN handles everything.
+
+**Where to place it** — use your judgement:
+- **Bottom of page / footer area**: after the last content section
+- **Sidebar / navigation area**: within the nav section
+- **Tab content area** (e.g. "All Files" tab): at top or bottom of the tab content
+- **Source/reference sections**: beside or within bibliography/sources areas
 
 Multiple containers are supported — each renders its own trigger.
 

@@ -19,8 +19,9 @@ Wrap the **anchor text** (the specific phrase being verified — typically ≤ 4
 <!-- ✕ Wrong: attribute on the block element -->
 <p data-citation-key="cite-revenue">Revenue grew 45% year-over-year to $2.3B.</p>
 
-<!-- ✕ Wrong: attribute on a div container -->
+<!-- ✕ Wrong: div is a block element — use <span> instead -->
 <div class="stat-value" data-citation-key="cite-revenue">$2.3B</div>
+<!-- ✓ Fix: <span class="stat-value" data-citation-key="cite-revenue">$2.3B</span> -->
 ```
 
 ### Placement rules
@@ -53,7 +54,7 @@ Build this by comparing `citations.json` keys with `citations-keyed.json` keys. 
 For each source, include a `downloadUrl` in the verification data so the popover can render a download button:
 
 - **URL sources**: Use the original URL (e.g., `"downloadUrl": "https://example.com/report.pdf"`)
-- **Local files**: Use the path or a hosted URL if available
+- **Local files**: omit — no remote URL is available
 - **Prepared sources**: The `prepare` response's source URL is the download URL
 
 The CDN popover header displays a download icon (revealed on hover) when `downloadUrl` is present.
