@@ -69,12 +69,31 @@ For each claim, add `data-cite="N"` to the element containing the claim and `[N]
 
 Save as `.deepcitation/marked-{timestamp}.html`.
 
-**Anchor text guidelines.** Use 1-3 key words from `full_phrase` — enough to locate the claim, not a full sentence. Keep `full_phrase` to a single line from the deepTextPromptPortion — multi-line values often degrade to `partial_text_found`.
+**Anchor text — concise label, not a summary.** `anchor_text` serves two purposes:
 
-Examples:
-- **Good**: `full_phrase: "Revenue grew 45% year-over-year to $2.3B"`, `anchor_text: "$2.3B"`
-- **Good**: `full_phrase: "The court held that Section 4(b) was unconstitutional"`, `anchor_text: "Section 4(b)"`
-- **Bad**: `anchor_text: "unconstitutional"` — too generic, often results in `partial_text_found`
+1. **Verification**: The API searches the source for this exact string
+2. **UI label**: Users see it as the clickable citation label — it should reward a click with deeper context, not repeat what's already visible
+
+**Hard constraints:**
+- Maximum 4 words / 40 characters
+- Must be a verbatim substring of `full_phrase`
+- Must be the most specific, information-dense fragment (a number, proper noun, percentage, date, statute section — not generic verbs or adjectives)
+
+**The progressive disclosure test:** If the user can already see the claim on the page, `anchor_text` should be the part that makes them curious — "where exactly does this come from?" A good `anchor_text` is a keyhole into the source document.
+
+| Quality | `full_phrase` | `anchor_text` | Why |
+|---------|-------------|--------------|-----|
+| Good | "Revenue grew 45% year-over-year to $2.3B" | `$2.3B` | Specific number — click reveals source context |
+| Good | "The court held that Section 4(b) was unconstitutional" | `Section 4(b)` | Legal reference — click shows the court's reasoning |
+| Good | "Recommended daily sodium intake is 2,300 mg" | `2,300 mg` | Precise value — click reveals the guideline source |
+| Good | "Form 1040 Schedule C line 31" | `Schedule C line 31` | Specific form reference |
+| Bad | "Revenue grew 45% year-over-year to $2.3B" | `Revenue grew 45% year-over-year to $2.3B` | Repeats full_phrase — adds nothing on click |
+| Bad | same | `unconstitutional` | Too generic — appears in many contexts |
+| Bad | same | `the revenue was about two point three billion` | Paraphrased — not verbatim, will fail API match |
+
+**If `anchor_text` exceeds 40 characters or 4 words, shorten it.** Find the most distinctive substring.
+
+Keep `full_phrase` to a single line from the `deepTextPromptPortion` — multi-line values often degrade to `partial_text_found`.
 
 **`anchor_text` and `full_phrase` must be verbatim from the source document (`deepTextPromptPortion`).** The verification API searches the source for these exact strings. **Always cite using source text as `anchor_text`** — even when the HTML displays a different value. The popover shows the user the verification status, surrounding context, and variant matches the API attempted. A ⚠ or ✗ next to a claim is more useful than no indicator at all.
 
