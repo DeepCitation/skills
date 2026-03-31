@@ -20,7 +20,7 @@ Scan `$ARGUMENTS`, conversation, and working directory:
 - **Citations exist** (`[N]` markers + `<<<CITATION_DATA>>>`):
   ensure sources are prepared, then run `deepcitation verify --html`.
 - **Content exists, no citations**: identify sources → prepare →
-  build marked HTML → run `deepcitation verify --html`.
+  build verified HTML → run `deepcitation verify --html`.
 - **Nothing to verify**: exit gracefully.
 
 If `/verify` was invoked alongside a question, answer naturally first
@@ -31,14 +31,13 @@ If `/verify` was invoked alongside a question, answer naturally first
 If `$ARGUMENTS` contains `--audience <preset>` (one of `executive`,
 `technical`, `legal`, `medical`) or the audience is clear from context,
 pass that preset to the HTML build step. Default: `general`.
-See [rules/report-style.md](rules/report-style.md) for preset definitions.
 
 ## 3. Prepare sources
 
 Load [rules/prepare-sources.md](rules/prepare-sources.md). Run
 `deepcitation prepare` on each source in parallel (one Agent per source).
 
-## 4. Build marked HTML
+## 4. Build verified HTML
 
 Load [rules/build-verified-html.md](rules/build-verified-html.md). Read the
 `deepTextPromptPortion` from each prepared source. Identify every verifiable
