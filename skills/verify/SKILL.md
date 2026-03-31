@@ -17,7 +17,7 @@ Scan `$ARGUMENTS`, conversation history, and working directory:
 
 | Situation | Action |
 |-----------|--------|
-| `[N]` markers + `<<<CITATION_DATA>>>` already exist (in HTML) | Ensure sources are prepared → `verify --html` (skip Steps 1–2) |
+| `[N]` markers + `<<<CITATION_DATA>>>` already exist in an HTML file | Ensure sources are prepared → `verify --html` (skip Steps 1–2) |
 | Content exists with claims but no citation markers | Prepare sources → write cited markdown → `verify --markdown` |
 | `/verify` invoked with a question | Answer naturally first → prepare sources → write cited markdown → `verify --markdown` |
 | Nothing to verify | Exit gracefully — tell the user no verifiable content was found |
@@ -204,6 +204,7 @@ npx -y deepcitation verify --markdown draft.md --style plain
 - **`--style report`** (default): Progressive disclosure with verdict banner, collapsible tiers, design tokens.
 - **`--style plain`**: Clean minimal HTML for quick fact-checks or embedding.
 - **`--audience`**: `general` (default), `executive`, `technical`, `legal`, `medical`.
+- **`--theme`**: `auto` (default), `light`, `dark`. Controls popover color scheme.
 
 ### If you already have HTML
 
