@@ -57,13 +57,10 @@ Match the HTML structure to the content. If the source is full of tables and
 figures, use `<table>` elements — don't flatten everything into prose. If the
 content is narrative, use paragraphs and lists. Let the data shape the report.
 
-### Anchor text and display labels
+### Anchor text
 
-`anchor_text` should read naturally in the flow of the sentence. When the
-best API search term (a number, code, or ID) would read awkwardly inline,
-use `displayLabel` to override what the reader sees while keeping the
-precise `anchor_text` for the API.
-
-Example: if a citation anchors on "§ 5.02(a)(3)", but the sentence reads
-"under the relevant provision [N]", set `anchor_text: "§ 5.02(a)(3)"` and
-`displayLabel: "provision"` so the popover trigger fits the prose.
+`anchor_text` should read naturally in the flow of the sentence. Choose
+the most specific fragment (a number, proper noun, statute section) that
+also works as a good API search term. The CLI automatically sets display
+labels when the visible text differs from `anchorText`, so you don't need
+to manage `displayLabel` manually.
