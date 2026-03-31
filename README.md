@@ -25,7 +25,7 @@ Or add it manually — in your project's `.claude/settings.json`, add the skill 
 
 ### With other agents
 
-The `SKILL.md` files and rule files are plain Markdown — any agent that supports reading Markdown instructions can use them.
+Each `SKILL.md` is a self-contained Markdown file — any agent that supports reading Markdown instructions can use them.
 
 ## How it works
 
