@@ -17,7 +17,7 @@ Scan `$ARGUMENTS`, conversation history, and working directory:
 
 | Situation | Action |
 |-----------|--------|
-| `[N]` markers + `<<<CITATION_DATA>>>` already exist in an HTML file | Ensure sources are prepared → `verify --html` (skip Steps 1–2) |
+| `[N]` markers + `<<<CITATION_DATA>>>` already exist in an HTML file | Ensure sources are prepared → `verify --html` (skip to Step 3) |
 | Content exists with claims but no citation markers | Prepare sources → write cited markdown → `verify --markdown` |
 | `/verify` invoked with a question | Answer naturally first → prepare sources → write cited markdown → `verify --markdown` |
 | Nothing to verify | Exit gracefully — tell the user no verifiable content was found |
@@ -48,13 +48,7 @@ wait
 ```
 
 `--summary` prints `attachmentId` and `deepTextPromptPortion` to stdout so you
-can read them directly from the bash output — no need to read the JSON file.
-
-Without `--summary`, read the output JSON to get `deepTextPromptPortion`:
-```bash
-npx -y deepcitation prepare source.pdf
-# then Read .deepcitation/prepare-source.json
-```
+can read them directly — no need to read the JSON file.
 
 Retain both `attachmentId` and `deepTextPromptPortion` — they are needed in Step 2.
 
@@ -113,13 +107,9 @@ At the end of the file, append the citation data. Shorthand keys save tokens:
 <<<END_CITATION_DATA>>>
 ```
 
-Key mapping: `n`=id, `a`=attachmentId, `r`=reasoning, `f`=full_phrase, `k`=anchor_text, `p`=page_id, `l`=line_ids.
+Key mapping: `n`=id, `a`=attachment_id, `r`=reasoning, `f`=full_phrase, `k`=anchor_text, `p`=page_id, `l`=line_ids.
 
-Longhand keys also work: `id`, `reasoning`, `full_phrase`, `anchor_text`, `page_id`, `line_ids`.
-Grouped-by-attachmentId format also works (see `--html` path).
-
-For URL sources prepared with `deepcitation prepare <url>`, include `"d":"<original_url>"`
-(longhand: `downloadUrl`) so the popover shows a download button.
+Longhand keys also work: `id`, `attachment_id`, `reasoning`, `full_phrase`, `anchor_text`, `page_id`, `line_ids`.
 
 ### Citation field rules
 
@@ -213,6 +203,8 @@ If the content is already an HTML file with `[N]` markers and `<<<CITATION_DATA>
 ```bash
 npx -y deepcitation verify --html .deepcitation/existing-report.html
 ```
+
+The `--html` path also accepts the grouped-by-attachmentId citation format.
 
 ### Report results
 
