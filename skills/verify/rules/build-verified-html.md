@@ -23,7 +23,7 @@ When in doubt, cite it. Overciting costs nothing; underciting defeats the purpos
 ## 3. Build the HTML
 
 Structure the content as a self-contained HTML document:
-- Follow [report-style.md](./report-style.md) for design tokens, progressive disclosure tiers, and audience presets
+- Follow [report-style.md](./report-style.md) for progressive disclosure tiers and HTML structure guidance
 - Inline styles or a `<style>` block -- no external CSS
 - Group related findings under headings; use tables where appropriate
 - Include a title/header and verdict banner describing the topic

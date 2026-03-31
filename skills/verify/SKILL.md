@@ -31,7 +31,6 @@ If `/verify` was invoked alongside a question, answer naturally first
 If `$ARGUMENTS` contains `--audience <preset>` (one of `executive`,
 `technical`, `legal`, `medical`) or the audience is clear from context,
 pass that preset to the HTML build step. Default: `general`.
-See [rules/report-style.md](rules/report-style.md) for preset definitions.
 
 ## 3. Prepare sources
 
