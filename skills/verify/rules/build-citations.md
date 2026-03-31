@@ -67,7 +67,7 @@ For each claim, add `data-cite="N"` to the element containing the claim and `[N]
 <<<END_CITATION_DATA>>>
 ```
 
-Save as `.deepcitation/marked-{timestamp}.html`.
+Save as `.deepcitation/verified-{timestamp}.html`.
 
 **Anchor text — concise label, not a summary.** `anchor_text` serves two purposes:
 
@@ -105,7 +105,7 @@ Never:
 ### 4. Verify
 
 ```bash
-npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html
+npx -y deepcitation verify --html .deepcitation/verified-{timestamp}.html
 ```
 
 One command handles keygen, annotation, verification, and CDN injection. For finer control over individual steps, see [verify-and-inject.md](./verify-and-inject.md).
@@ -159,7 +159,7 @@ This is the single source of truth for field rules, format, and examples.
 <<<END_CITATION_DATA>>>
 ```
 
-4. Save as `.deepcitation/marked-{timestamp}.html`
-5. Run `npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html`
+4. Save as `.deepcitation/verified-{timestamp}.html`
+5. Run `npx -y deepcitation verify --html .deepcitation/verified-{timestamp}.html`
 
 The `verify` command handles the rest — no need to manually extract citations, run keygen, annotate, or inject.

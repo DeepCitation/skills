@@ -40,17 +40,17 @@ Load [rules/prepare-sources.md](rules/prepare-sources.md). Run
 
 ## 4. Build marked HTML
 
-Load [rules/build-marked-html.md](rules/build-marked-html.md). Read the
+Load [rules/build-verified-html.md](rules/build-verified-html.md). Read the
 `deepTextPromptPortion` from each prepared source. Identify every verifiable
 claim. Produce an HTML file with `[N]` markers, `data-cite="N"` attributes,
-and a `<<<CITATION_DATA>>>` block. Save to `.deepcitation/marked-{ts}.html`.
+and a `<<<CITATION_DATA>>>` block. Save to `.deepcitation/verified-{ts}.html`.
 
 For `lineIds` and `pageNumber` rules: [rules/line-ids.md](rules/line-ids.md).
 
 ## 5. Verify + deliver
 
 ```bash
-npx -y deepcitation verify --html .deepcitation/marked-{ts}.html
+npx -y deepcitation verify --html .deepcitation/verified-{ts}.html
 ```
 
 One command: parse → keygen → annotate → verify (~0.5s) → inject CDN runtime.

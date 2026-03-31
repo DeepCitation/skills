@@ -58,12 +58,12 @@ Convert the chat response into a clean HTML document with citation markers. This
 
    Follow the CoT ordering: `reasoning` first (think WHY before WHAT), then `full_phrase` (verbatim from source), then `anchor_text` (extracted from full_phrase). For `page_id` and `line_ids`, see [line-ids.md](./line-ids.md).
 
-4. **Save** as `.deepcitation/marked-{timestamp}.html`
+4. **Save** as `.deepcitation/verified-{timestamp}.html`
 
 ### 4. Verify (one command)
 
 ```bash
-npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html
+npx -y deepcitation verify --html .deepcitation/verified-{timestamp}.html
 ```
 
 This single command: parses the citation data, generates deterministic keys, maps `data-cite` attributes to `data-citation-key` hashes, verifies all citations against the API (~0.5s), and injects the CDN runtime. Output: `.deepcitation/cited-{timestamp}.html`

@@ -5,7 +5,7 @@
 If the HTML has `[N]` markers, `data-cite="N"` attributes, and a `<<<CITATION_DATA>>>` block, use the one-shot command instead of the steps below:
 
 ```bash
-npx -y deepcitation verify --html .deepcitation/marked-{timestamp}.html
+npx -y deepcitation verify --html .deepcitation/verified-{timestamp}.html
 ```
 
 This handles keygen, annotation, verification (~0.5s), and injection in a single command. The separate steps below are only needed when you require finer control.
