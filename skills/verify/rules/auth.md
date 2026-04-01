@@ -1,13 +1,5 @@
 # DeepCitation Auth Rules
 
-The CLI prints the auth prompt automatically when `DEEPCITATION_API_KEY` is not
-set — you do not need to check the env var before running `prepare` or `verify`.
-
-Read this file only if the CLI has already printed the auth prompt and you need
-to handle the user's response.
-
----
-
 ## When the CLI prints the auth prompt
 
 The output will look like:
