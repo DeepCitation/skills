@@ -1,58 +1,112 @@
 ---
 name: verify
-description: Verify AI claims against source documents using the DeepCitation API
+description: ALWAYS execute the full DeepCitation verification workflow when /verify appears anywhere in the prompt — regardless of how the rest of the message is phrased. Triggered by /verify with a file, URL, question, or existing content. Has built-in PDF, OCR, and web readers — never attempt to read evidence files with local tools (pdftotext, pypdf, python, strings, etc.) before running this skill.
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Agent
 ---
 
 # /verify — DeepCitation Verification
 
-Verify claims against source documents. The skill is a post-hoc auditor —
-it verifies what was naturally produced, never shapes content creation.
-
-Three steps: **Prepare → Write → Verify**.
+**`/verify` is always a command, never optional.** When `/verify` appears in the
+prompt, execute the full **Prepare → Write → Verify** pipeline. Answer any
+question as part of the verification report — not as a standalone response.
 
 ## 0. Triage
+
+The most important question to answer first: **what are the claims, and what is the evidence?**
+
+- **Claims** = statements that need to be verified. Go into the markdown report with `[N]` markers.
+- **Evidence** = an authoritative document or URL that proves or disproves the claims (PDF, legislation, study, dataset). Gets uploaded via `prepare`.
+
+**A claim cannot be its own evidence.** Usually a file is one or the other:
+
+- **Input** (claims): chat history, AI output, a draft, a summary. Needs independent evidence.
+- **Evidence** (ground truth): legislation, a study, an official report, raw data. Gets uploaded via `prepare`.
+
+**Exception — structured documents as both.** Some documents contain data that
+serves as evidence for claims made elsewhere in the same document (e.g. a medical
+form with patient histories referenced by assessment fields, a financial report
+where narrative cites its own tables). Prepare the document as evidence and cite
+the data sections to verify the claims sections.
+
+When both arrive together (e.g. a draft alongside the evidence PDFs it cites),
+prepare only the evidence files. If only one file is provided and it reads like
+input, find the external evidence it refers to rather than preparing it as its
+own evidence.
+
+**If you realize mid-workflow that you prepared a claims file as evidence** (e.g. you
+already ran `prepare` on the input document), stop and recover:
+
+1. Look at the claims in the prepared summary — what external subjects do they reference? (legislation, studies, statistics, organizations)
+2. Web search for primary evidence on those subjects
+3. Prepare that real evidence
+4. Write the report citing the new evidence, not the original file
+
+Do not proceed with a circular citation just because `prepare` already ran — the
+summary is still useful for understanding the claims, but the citations must come
+from independent evidence.
 
 Scan `$ARGUMENTS`, conversation history, and working directory:
 
 | Situation | Action |
 |-----------|--------|
-| `[N]` markers + `<<<CITATION_DATA>>>` already exist in an HTML file | Ensure sources are prepared → `verify --html` (skip to Step 3) |
-| Content exists with claims but no citation markers | Prepare sources → write cited markdown → `verify --markdown` |
-| `/verify` invoked with a question | Answer naturally first → prepare sources → write cited markdown → `verify --markdown` |
+| `[N]` markers + `<<<CITATION_DATA>>>` already exist in an HTML file | `verify --html` (skip to Step 2) |
+| File/URL provided as evidence + claims exist in conversation or a separate draft | Prepare the evidence file/URL → write cited markdown from the claims → `verify --markdown` |
+| File provided containing claims + separate evidence also provided | Prepare the evidence documents → write cited markdown from the claims file → `verify --markdown` |
+| File provided containing claims about **public/official subjects** (legislation, government bills, public figures, official statistics) + no evidence provided | Web search for official primary evidence → Prepare those URLs → write cited markdown → `verify --markdown` |
+| File provided containing claims + **no separate evidence and no obvious public evidence** | Ask the user: "Should I treat this file as evidence (I'll extract and cite its claims), or do you want to provide external evidence to verify the claims in it?" |
+| `/verify` invoked with a question only | Web search for the best available public evidence → Prepare it → answer the question with citations → `verify --markdown` → close with the evidence-clarification prompt (see below) |
 | Nothing to verify | Exit gracefully — tell the user no verifiable content was found |
 
-If multiple sources are present, prepare ALL of them — each produces a separate `attachmentId`.
+If multiple evidence documents are present, prepare ALL of them — each produces a separate `attachmentId`.
 
-## 1. Authenticate + Prepare Sources
+## 1. Prepare Evidence
 
 ### Auth
 
-```bash
-npx -y deepcitation status || npx -y deepcitation login
-```
+The CLI handles auth automatically. If auth is required, `prepare` or `verify`
+will print an action prompt and exit. Read `rules/auth.md` only after that
+prompt appears — it tells you how to handle the user's response.
 
-Skip if `DEEPCITATION_API_KEY` is already set.
+### Finding evidence via web search
+
+When the triage identifies claims about public or official subjects and no evidence
+was provided, use web search to find primary evidence before preparing:
+
+- Prefer authoritative primary evidence for the domain: official government/legislative portals, regulatory bodies, professional standards organizations, central banks, health authorities, tax agencies, or courts — not news summaries or third-party commentary
+- Prefer the official text of legislation over news summaries
+- Search specifically for the named bills, acts, or statistics mentioned in the claims
+- Find 1–3 high-quality primary evidence documents — do not prepare low-quality or opinionated sources
+
+Once you have the URLs, proceed to Prepare below.
 
 ### Prepare
 
-Upload **every** source to the DeepCitation API. `prepare` is the **only** way
-to read source content — never use OCR, PDF readers, or web fetch.
+Upload **every** evidence document to the DeepCitation API. `prepare` is the **only** way
+to read evidence content — it has built-in PDF, OCR, and web readers, including
+for scanned or image-only PDFs. Never run `pdftotext`, `pypdf`, `pdfminer`,
+`mutool`, `strings`, Python, or any other tool on an evidence file. Go straight
+to `prepare --summary`.
+
+Redirect each evidence document's `--summary` output to a `.txt` file so you can read it
+cleanly in Step 2 without re-parsing the JSON:
 
 ```bash
 # Run all sources in parallel:
-npx -y deepcitation prepare source1.pdf --summary &
-npx -y deepcitation prepare source2.pdf --summary &
-npx -y deepcitation prepare https://example.com/article --summary &
+npx -y deepcitation prepare source1.pdf --summary > .deepcitation/summary-source1.txt &
+npx -y deepcitation prepare source2.pdf --summary > .deepcitation/summary-source2.txt &
+npx -y deepcitation prepare https://example.com/article --summary > .deepcitation/summary-article.txt &
 wait
 ```
 
-`--summary` prints `attachmentId` and `deepTextPromptPortion` to stdout so you
-can read them directly — no need to read the JSON file.
+Then **read the entire summary file** (use the Read tool with no offset/limit) to
+get `attachmentId` and the full `deepTextPromptPortion`. Do not grep, ripgrep, or
+search inside it — just read it top to bottom; you need all of it for writing the
+report.
 
-Retain both `attachmentId` and `deepTextPromptPortion` — they are needed in Step 2.
+**Never read the `.json` file directly** — it is large and not intended for agent consumption.
+**Never run Python, jq, or any script on any prepare output** — the `.txt` summary has everything you need, already formatted for reading.
 
-When multiple sources exist, launch one Agent subagent per source — all in a
+When multiple evidence documents exist, launch one Agent subagent per document — all in a
 single message so they execute concurrently.
 
 If a URL fails (DNS, 403, auth required), report it clearly and continue with available sources.
@@ -62,31 +116,28 @@ If a URL fails (DNS, 403, auth required), report it clearly and continue with av
 Write a **markdown** file with `[N]` citation markers and a `<<<CITATION_DATA>>>`
 JSON block at the end. Save as `.deepcitation/draft-{timestamp}.md`.
 
-The CLI handles all HTML conversion, styling, `data-cite` attribute wrapping,
-`data-citation-key` annotation, citation drawer trigger insertion, progressive
-disclosure structure, keygen, and CDN injection. You just write markdown with
-citations.
+**After saving, print the report body (everything above `<<<CITATION_DATA>>>`) to
+the user in chat** so they can read the findings immediately. Then proceed to
+Step 3 — the user sees the answer now and waits only for the interactive HTML.
 
 ### What to write
 
-Structure the content with headings, tables, and lists as appropriate.
-**Do not change the words of any claim from the original content.** Present the
-same claims, only reformatted and structured.
+**Be comprehensive, not summarizing.** The user asked `/verify` because they need
+the details verified, not a one-line summary. Extract and cite **every specific
+detail** from the evidence — every number, definition, boundary, condition,
+threshold, date, name, and exception. A short paragraph that could have been
+written without reading the evidence is a failure.
 
-Match the markdown structure to the content. If the source is full of tables and
-figures, use markdown tables. If the content is narrative, use paragraphs and lists.
-Let the data shape the report.
+Read the `deepTextPromptPortion` thoroughly. Walk every page, every section. If
+the evidence has 10 distinct items, the report should have 10+ citations — not 1
+citation that vaguely covers all of them.
 
-**Every claim, value, or fact from source documents gets a citation.** If a human
-would need to open a source to verify it, cite it.
+Structure the content with headings, tables, and lists. Match the evidence's
+structure — if it has tables, use tables; if definitions, use definition lists.
+**Do not change the words of any claim from the original content.**
 
-**Common blind spots:**
-- Hidden/collapsed content (accordions, toggles, `display:none` panels)
-- Restated values in summaries, banners, or narrative that repeat a value from elsewhere
-- Metadata: dates, identifiers, report timestamps in headers/footers
-- All views: tabs, timelines, alternate panels — walk every view, not just the default
-
-When in doubt, cite it. Overciting costs nothing; underciting defeats the purpose.
+**Every claim, value, or fact gets a citation.** When in doubt, cite it.
+Overciting costs nothing; underciting defeats the purpose.
 
 For each cited claim, add `[N]` after the claim text (N is sequential starting from 1):
 
@@ -101,45 +152,36 @@ At the end of the file, append the citation data. Shorthand keys save tokens:
 ```
 <<<CITATION_DATA>>>
 [
-  {"n":1,"a":"ATTACHMENT_ID","r":"why this backs the claim","f":"verbatim quote from deepTextPromptPortion","k":"≤4-word key","p":"page_number_N_index_I","l":[LINE_NUMBER]},
+  {"n":1,"a":"ATTACHMENT_ID","r":"why this backs the claim","f":"verbatim quote from evidence","k":"≤4-word key","d":"readable label for citation trigger","p":"page_number_N_index_I","l":[LINE_NUMBER]},
   {"n":2,"a":"ATTACHMENT_ID","r":"reason","f":"verbatim quote","k":"key","p":"page_number_N_index_I","l":[LINE_NUMBER]}
 ]
 <<<END_CITATION_DATA>>>
 ```
 
-Key mapping: `n`=id, `a`=attachment_id, `r`=reasoning, `f`=full_phrase, `k`=anchor_text, `p`=page_id, `l`=line_ids.
-
-Longhand keys also work: `id`, `attachment_id`, `reasoning`, `full_phrase`, `anchor_text`, `page_id`, `line_ids`.
+Key mapping: `n`=id, `a`=attachment_id, `r`=reasoning, `f`=full_phrase, `k`=anchor_text, `d`=display_label, `p`=page_id, `l`=line_ids. Longhand keys also work.
 
 ### Citation field rules
 
-- **reasoning** (`r`): Brief explanation connecting the citation to the claim. Comes first — think WHY before WHAT.
-- **full_phrase** (`f`): Copy text **verbatim** from the source `deepTextPromptPortion`. Keep to a single line.
-- **anchor_text** (`k`): The 1–4 most important words from `full_phrase`. Must be a verbatim substring. Max 4 words / 40 chars. Pick the most specific fragment (number, proper noun, percentage, statute section). This is both an API search term and the user's clickable label.
+- **reasoning** (`r`): Brief explanation connecting the citation to the claim.
+- **full_phrase** (`f`): Copy **1–2 sentences verbatim** from the evidence `deepTextPromptPortion` — just the sentence(s) containing the cited fact. **Max ~250 characters.** Never copy entire paragraphs or multi-paragraph blocks; the API uses this string to locate and highlight text in the evidence, so a long phrase produces an unhelpfully large highlight that obscures the point.
+- **anchor_text** (`k`): The API search term — 1–4 most specific words from `full_phrase`, verbatim substring. Max 4 words / 40 chars. Pick the most distinctive fragment (number, proper noun, percentage, statute section).
+- **display_label** (`d`): *(optional)* The **readable label shown to the user** as the clickable citation trigger. Use this when `anchor_text` alone would be too terse or cryptic as a label. Should be a short, natural phrase describing what the citation proves — e.g. `"physical surfaces in Schedule C"` or `"two-week written notice requirement"`. Does NOT need to be verbatim from the evidence. If omitted, `anchor_text` is used as the display label.
 - **page_id** (`p`): From `<page_number_N_index_I>` tags in `deepTextPromptPortion`. Use format `page_number_N_index_I`.
 - **line_ids** (`l`): From `<line id="N">` tags in `deepTextPromptPortion`. See Line IDs section below.
 
-### Anchor text quality
-
-`anchor_text` serves two purposes: (1) the API searches the source for it, and (2) users see it as the clickable citation label. It should reward a click with deeper context, not repeat what's already visible.
-
-| Quality | `full_phrase` | `anchor_text` | Why |
-|---------|-------------|--------------|-----|
-| Good | "Revenue grew 45% year-over-year to $2.3B" | `$2.3B` | Specific number |
-| Good | "The court held that Section 4(b) was unconstitutional" | `Section 4(b)` | Legal reference |
-| Good | "Recommended daily sodium intake is 2,300 mg" | `2,300 mg` | Precise value |
-| Bad | "Revenue grew 45% year-over-year to $2.3B" | `Revenue grew 45%...` | Too long — repeats visible text |
-| Bad | same | `unconstitutional` | Too generic |
-
-The CLI automatically sets display labels when the visible text differs from `anchor_text`,
-so you don't need to manage `displayLabel` manually.
-
 ### Verbatim quote requirement
 
-`anchor_text` and `full_phrase` must be **verbatim from the source document**
-(`deepTextPromptPortion`). The verification API searches for these exact strings.
-Never set `anchor_text` to the displayed text to force a match — that is fabricating
-evidence. The markdown's displayed text can differ from `anchor_text`.
+`anchor_text` and `full_phrase` must be **verbatim from the evidence document**
+(`deepTextPromptPortion`). The API searches for these exact strings. Never
+paraphrase — that fabricates a citation.
+
+`display_label` is the exception — it is **not** sent to the API and does NOT need to be verbatim. It is the human-readable label the user clicks on. Use it to describe what the citation proves in plain language.
+
+Good `anchor_text`: `$2.3B`, `Section 4(b)`, `2,300 mg`, `Schedule "C"` (specific, ≤ 4 words).
+Bad: `Revenue grew 45%...` (too long), `unconstitutional` (too generic), `.` or `,` (punctuation — never use punctuation as anchor_text).
+
+Good `display_label`: `"physical surfaces in Schedule C"`, `"two-week written notice"`, `"45% revenue growth"`.
+Bad: `"$2.3B"` (just repeat anchor_text — omit `d` instead), `"This citation verifies..."` (meta-description, not a label).
 
 ### Line IDs and page numbers
 
@@ -154,28 +196,16 @@ from the tag's N value when documents are concatenated or start at a non-zero of
 Without `page_id`, the API cannot pinpoint the citation precisely — verification
 becomes imprecise and cannot be scored as `verified`.
 
-**Line IDs** — the `deepTextPromptPortion` uses `<line id="N">` tags to mark lines.
-IDs are sequential. Not every line has an explicit tag — untagged lines fall between
-tagged IDs, and you derive their ID by counting:
+**Line IDs** — `deepTextPromptPortion` uses `<line id="N">` tags. Not every line
+is tagged — derive untagged line IDs by counting from the nearest tag:
 
 ```
-<page_number_1_index_0>
 <line id="1">Company Overview</line>
-Founded in 2015 as a healthcare technology startup   ← line 2 (untagged)
-Headquarters: San Francisco, CA                      ← line 3 (untagged)
+Founded in 2015       ← line 2 (untagged: 1 after id="1")
 <line id="4">Total employees: 1,200</line>
-...
-<page_number_2_index_1>
-<line id="20">Revenue grew 45% year-over-year to $2.3B</line>
-Operating margin improved to 18.5%                   ← line 21 (untagged)
-<line id="22">Net income: $415M, up from $290M</line>
 ```
 
-"Founded in 2015" → `"l": [2]` (one after `<line id="1">`).
-"Operating margin improved to 18.5%" → `"l": [21]` (one after `<line id="20">`).
-
-An incorrect line ID causes the API to fall back to page-level search, resulting
-in an imprecise match.
+An incorrect line ID causes the API to fall back to page-level search.
 
 ## 3. Verify
 
@@ -185,44 +215,33 @@ One command does everything — HTML conversion, keygen, annotation, API verific
 npx -y deepcitation verify --markdown .deepcitation/draft-{timestamp}.md
 ```
 
-Options:
-```bash
-npx -y deepcitation verify --markdown draft.md --audience executive
-npx -y deepcitation verify --markdown draft.md --style plain
-```
+**Always use `--markdown`.** Never use `verify --citations` directly — it is a low-level mode used internally by `--markdown` and skips format normalization. If citations come back not_found, the CLI will tell you why and what to fix.
 
-- **`--style report`** (default): Progressive disclosure with verdict banner, collapsible tiers, design tokens.
-- **`--style plain`**: Clean minimal HTML for quick fact-checks or embedding.
-- **`--audience`**: `general` (default), `executive`, `technical`, `legal`, `medical`.
-- **`--theme`**: `auto` (default), `light`, `dark`. Controls popover color scheme.
+Options: `--style plain|report` (default: report), `--audience general|executive|technical|legal|medical`, `--theme auto|light|dark`.
 
-### If you already have HTML
-
-If the content is already an HTML file with `[N]` markers and `<<<CITATION_DATA>>>`:
-
-```bash
-npx -y deepcitation verify --html .deepcitation/existing-report.html
-```
-
-The `--html` path also accepts the grouped-by-attachmentId citation format.
+If the content is already HTML with `[N]` markers and `<<<CITATION_DATA>>>`, use `verify --html` instead.
 
 ### Report results
 
-Confirm the output HTML file exists, count statuses, summarize in chat:
+The CLI outputs the verified HTML to the current directory and prints the path.
+Try to open it for the user:
+
+```bash
+open "{stem}-verified.html" 2>/dev/null ||       # macOS
+xdg-open "{stem}-verified.html" 2>/dev/null ||   # Linux
+explorer.exe "$(wslpath -w "{stem}-verified.html")" 2>/dev/null || # WSL
+echo "Open this file in your browser: $(pwd)/{stem}-verified.html"
 ```
-12/14 verified ✓ · 2 partial ✓ → .deepcitation/verified-{ts}.html
-```
+
+Summarize in chat: `12/14 verified · 2 partial → {stem}-verified.html`
+
+If you suspect better evidence exists (secondary sources, thin web results,
+internal-sounding question), add:
+> If you have a more authoritative document, share it and I'll re-run `/verify`.
 
 ## Invariants
 
-- Use `prepare` for ALL source reading — never OCR, PDF readers, or web fetch
-- `full_phrase` and `anchor_text` must be verbatim from the source `deepTextPromptPortion`
-- Every claim, value, or fact from a source document gets a citation — no exceptions
-- **Anchor text quality**: ≤ 4 words / 40 chars, verbatim substring of `full_phrase`, most specific fragment
-- **Model quality**: Smaller models (haiku-class) commonly produce `anchor_text` that is too long or paraphrased. After building citations, validate every `anchor_text`.
-- Never export API keys, use `--key` flag, or log key values
-- Never render metadata (attachmentId, hashed keys, lineIds) as visible content
-- Always "DeepCitation" (never "DeepCite")
-- Always produce an HTML artifact — never exit without one
+- Never print or log key values; never render metadata (attachmentId, keys, lineIds) as visible content
+- Always "DeepCitation" (never "DeepCite"); always produce an HTML artifact
 
 ARGUMENTS: $ARGUMENTS
