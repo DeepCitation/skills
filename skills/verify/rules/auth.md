@@ -27,16 +27,17 @@ Wait for the user to act.
 
 ## Resuming after the user responds
 
-**If the user pastes a key** (any string that looks like an API key), set it
-yourself and proceed — do NOT ask them to re-run `/verify`:
+**If the user pastes a key** (any string that looks like an API key), inline it
+on every subsequent `deepcitation` command and proceed — do NOT ask them to
+re-run `/verify`:
 
 ```bash
-export DEEPCITATION_API_KEY=<the-key-they-provided>
+DEEPCITATION_API_KEY='<the-key-they-provided>' npx -y deepcitation prepare ...
 ```
 
-Then continue directly to Prepare. Setting the key on behalf of the user when
-they explicitly provide it is correct and expected behaviour — it is not a
-security violation.
+Prefix every `deepcitation` command with `DEEPCITATION_API_KEY='...'` for the
+rest of this workflow. Do not use `export` (env vars do not persist between
+Bash tool calls). Do not echo or print the key value.
 
 **If the user says they exported the key themselves**, re-run the first `prepare`
 command you were about to run. If it succeeds, continue. If the CLI prints the

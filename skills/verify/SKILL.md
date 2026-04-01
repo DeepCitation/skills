@@ -72,7 +72,8 @@ If multiple evidence documents are present, prepare ALL of them — each produce
 
 The CLI handles auth automatically. If `DEEPCITATION_API_KEY` is not set, any
 `prepare` or `verify` command will print the action needed and exit. Read
-`rules/auth.md` for how to handle the recovery flow when that happens.
+`rules/auth.md` only after the CLI prints the auth prompt — it tells you how to
+handle the user's response.
 
 ### Finding evidence via web search
 
