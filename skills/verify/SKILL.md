@@ -63,20 +63,16 @@ Your response IS the verification report. The citation format is below — do NO
 Use **standard markdown only** — no raw HTML tags (`<p>`, `<br>`, `<strong>`, etc.).
 The CLI's markdown→HTML converter handles formatting; raw tags render as literal text.
 
-Place `[N]` markers **inline, right after the anchor phrase** — not at the end of
-the sentence. `N` is the citation's sequential **id** (1, 2, 3…) from the JSON block
-below — NOT an evidence line number. Do NOT add extra square brackets around the
-anchor phrase — the `[N]` marker is the only bracket needed.
+Wrap the key phrase in citation link syntax: `[anchor text](cite:N)`
 
-- GOOD: `"The Discount Rate [2] is applied to the conversion price."`
-- GOOD: `"- Junior to [9] payment of outstanding indebtedness"` (bullet list — marker AFTER anchor, not at bullet start)
-- BAD: `"The [2] Discount Rate is applied to the conversion price."` (marker BEFORE anchor)
-- BAD: `"- [9] Junior to payment of outstanding indebtedness"` (marker at BULLET START — wrong)
-- BAD: `"The [Discount Rate] [2] is applied to the conversion price."` (extra brackets)
-- BAD: `"The Discount Rate is applied to the conversion price. [2]"` (end of sentence)
+`N` is the citation's sequential **id** (1, 2, 3…) from the JSON block below — NOT
+an evidence line number.
 
-Multiple facts in one sentence get separate inline markers:
-`"The Discount Rate [2] is multiplied by the lowest price per share [3]."`
+- GOOD: `"The [Discount Rate](cite:2) is applied to the conversion price."`
+- GOOD: `"- [Junior to](cite:9) payment of outstanding indebtedness"`
+- BAD: `"The Discount Rate is applied to the conversion price. [2]"` (old format)
+
+Multiple facts in one sentence: `"The [Discount Rate](cite:2) is multiplied by the [lowest price](cite:3)."`
 
 At the end, append the citation data block grouped by `attachmentId`:
 
