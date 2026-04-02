@@ -19,7 +19,7 @@ A claim cannot be its own evidence.
 | User provided a file/URL as evidence | That file/URL |
 | Prior chat already has claims to verify | Use existing claims as-is — do NOT rewrite them. Prepare evidence, then cite the existing text. |
 | Claims about public/official subjects, no evidence | Web-search for primary sources (legislation, official reports, studies) |
-| `[N]` markers + `<<<CITATION_DATA>>>` already exist in HTML | Skip to Step 3 with `verify --html` |
+| cite-link markers + `<<<CITATION_DATA>>>` already exist in HTML | Skip to Step 3 with `verify --html` |
 | You prepared the claims file as evidence | Web-search for primary sources and re-prepare |
 | Ambiguous (unclear which file is claims vs evidence) | Ask the user |
 
@@ -44,7 +44,7 @@ After login succeeds, **retry the same prepare command**.
 
 **If authentication fails after attempting login, STOP COMPLETELY:**
 - Do NOT continue writing a report
-- Do NOT generate citation markers `[N]`
+- Do NOT generate citation markers
 - Do NOT use previous conversations or memory to fabricate citations
 - Show the error and end your response
 
@@ -63,7 +63,7 @@ Your response IS the verification report. The citation format is below — do NO
 Use **standard markdown only** — no raw HTML tags (`<p>`, `<br>`, `<strong>`, etc.).
 The CLI's markdown→HTML converter handles formatting; raw tags render as literal text.
 
-Wrap the key phrase in citation link syntax: `[anchor text](cite:N)`
+Wrap the key phrase in citation link syntax: `[anchor text](cite:N)` — the link label must be identical to the `anchorText` value in the JSON block below.
 
 `N` is the citation's sequential **id** (1, 2, 3…) from the JSON block below — NOT
 an evidence line number.
@@ -71,6 +71,7 @@ an evidence line number.
 - GOOD: `"The [Discount Rate](cite:2) is applied to the conversion price."`
 - GOOD: `"- [Junior to](cite:9) payment of outstanding indebtedness"`
 - BAD: `"The Discount Rate is applied to the conversion price. [2]"` (old format)
+- BAD: `"The [Discount Rate is applied to the conversion price](cite:2)."` (anchor too long — use 1–3 word key term, not the whole clause)
 
 Multiple facts in one sentence: `"The [Discount Rate](cite:2) is multiplied by the [lowest price](cite:3)."`
 
@@ -121,7 +122,7 @@ Choose a descriptive report filename based on the topic (e.g., `yc-safe-analysis
 `q4-revenue-review.md`). Save the draft in `.deepcitation/` (scratch space).
 
 **What the user sees vs. what the file contains:**
-- **Print to the user**: Only the markdown report body (headings, paragraphs, `[N]` markers). No JSON.
+- **Print to the user**: Only the markdown report body (headings, paragraphs, citation links). No JSON.
 - **Save to the file**: Report body + `<<<CITATION_DATA>>>` JSON block at the end.
 - NEVER output raw JSON, attachmentId, lineIds, or pageId values in your response to the user.
 
@@ -135,7 +136,7 @@ npx -y deepcitation verify --markdown .deepcitation/{draft}.md \
   --out {topic}-verified.html
 ```
 
-If you skipped Step 1–2 because the HTML already had `[N]` markers (triage row above), use `--html` instead:
+If you skipped Step 1–2 because the HTML already had citation markers (triage row above), use `--html` instead:
 
 ```bash
 npx -y deepcitation verify --html {existing}.html \
