@@ -117,7 +117,7 @@ For each citation, think in this order (CoT):
    **Never** use the entire fullPhrase as the anchor. Never invent labels not in the text.
    **Never** use `...` or ellipsis to skip words — the anchor must be contiguous.
 
-**Reuse citations for repeated terms:** Before creating a new citation, check whether you have already cited from the same `lineId`. If yes, reuse that existing `id` — do not create a second JSON entry. A defined term (e.g., "Purchase Amount", "Common Stock") should have exactly one citation id no matter how many times it appears in the report. Aim for **8–12 citations per section maximum** — prefer reuse over exhaustive recitation.
+**Reuse citations for repeated terms:** Before creating a new citation, check whether you have already cited from the same `lineId`. If yes, reuse that existing `id` — do not create a second JSON entry. A defined term (e.g., "Purchase Amount", "Common Stock") should have exactly one citation id no matter how many times it appears in the report. Exception: if the `fullPhrase` you need is genuinely different from the existing citation for that `lineId` (e.g., the line defines two separate facts), a new id is still appropriate. Aim for **8–12 citations per section maximum** — prefer reuse over exhaustive recitation.
 
 Use `pageId` from `<page_number_N_index_I>` tags and `lineIds` from `<line id="N">` tags.
 
@@ -138,8 +138,8 @@ Each sub-agent prompt must include:
 **After both agents return — merge:**
 1. Concatenate bodies: Agent A's section first, then Agent B's section.
 2. Let N = the highest `id` value present in Agent A's `<<<CITATION_DATA>>>` block.
-3. Renumber Agent B's output: every `cite:1XX` link in the body → `cite:(N + (1XX − 99))`, and every `"id": 1XX` in the JSON → the same value. (e.g. if N=14: cite:100→cite:15, cite:101→cite:16, …)
-4. **Deduplicate by lineId:** scan both citation arrays for entries that share any `lineId` value. For each duplicate pair, keep Agent A's id, replace every occurrence of Agent B's (renumbered) id in the merged body with Agent A's id, and drop the duplicate JSON entry. This collapses cross-section references to the same defined term into one citation.
+3. Renumber Agent B's output: for each Agent B citation id `b` (where b ≥ 100), replace every `cite:b` link in the body with `cite:(N + b − 99)`, and replace every `"id": b` in the JSON with `N + b − 99`. (e.g. if N=14: cite:100→cite:15, cite:101→cite:16, …) *(Agent A is bounded at 8–12 citations, so N ≤ ~12 in practice; the gap to 100 is intentionally large to prevent collisions.)*
+4. **Deduplicate by lineId:** scan both citation arrays for entries that share any `lineId` value. For each duplicate pair, keep Agent A's id, replace every occurrence of Agent B's (renumbered) id in the merged body with Agent A's id, and drop the duplicate JSON entry. If Agent A and Agent B chose different anchor text for the same `lineId`, keep Agent A's JSON entry as-is and rewrite Agent B's body anchor text to match Agent A's `anchorText` before substituting the id. This collapses cross-section references to the same defined term into one citation.
 5. Merge the remaining citation entries under the same `attachmentId` key into one array.
 6. Write the merged result as the single draft file and proceed to Step 3.
 
@@ -204,6 +204,7 @@ If you suspect better evidence exists, add:
 - **Run verify ONCE** — do not edit the draft and re-verify. Do not programmatically validate fullPhrase lengths.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
 - **Citation ids must be consistent in both directions** — every `id` (1, 2, 3…) in `<<<CITATION_DATA>>>` must have a corresponding `[anchor](cite:N)` link in the body, and every `cite:N` link in the body must have a matching `id` in the JSON block. No orphaned citations in either direction.
+- **Citation density** — aim for 8–12 citations per section; prefer reuse of an existing id over creating a new one for the same `lineId`.
 - Never print/log key values; never render metadata (attachmentId, keys, lineIds) as visible content
 - Never output `<<<CITATION_DATA>>>` JSON in your response to the user — it goes ONLY in the saved draft file
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
