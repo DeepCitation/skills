@@ -63,7 +63,7 @@ Your response IS the verification report. The citation format is below — do NO
 Use **standard markdown only** — no raw HTML tags (`<p>`, `<br>`, `<strong>`, etc.).
 The CLI's markdown→HTML converter handles formatting; raw tags render as literal text.
 
-Wrap the key phrase in citation link syntax: `[anchor text](cite:N)` — the link label must be identical to the `anchorText` value in the JSON block below.
+Wrap the key phrase in citation link syntax: `[anchor text](cite:N)` — write the body first, then set `anchorText` in the JSON to exactly match the anchor text you chose in the body (same casing, same words).
 
 `N` is the citation's sequential **id** (1, 2, 3…) from the JSON block below — NOT
 an evidence line number.
@@ -138,8 +138,8 @@ Each sub-agent prompt must include:
 **After both agents return — merge:**
 1. Concatenate bodies: Agent A's section first, then Agent B's section.
 2. Let N = the highest `id` value present in Agent A's `<<<CITATION_DATA>>>` block.
-3. Renumber Agent B's output: for each Agent B citation id `b` (where b ≥ 100), replace every `cite:b` link in the body with `cite:(N + b − 99)`, and replace every `"id": b` in the JSON with `N + b − 99`. (e.g. if N=14: cite:100→cite:15, cite:101→cite:16, …) *(Agent A is bounded at 8–12 citations, so N ≤ ~12 in practice; the gap to 100 is intentionally large to prevent collisions.)*
-4. **Deduplicate by lineId:** scan both citation arrays for entries that share any `lineId` value. For each duplicate pair, keep Agent A's id, replace every occurrence of Agent B's (renumbered) id in the merged body with Agent A's id, and drop the duplicate JSON entry. If Agent A and Agent B chose different anchor text for the same `lineId`, keep Agent A's JSON entry as-is and rewrite Agent B's body anchor text to match Agent A's `anchorText` before substituting the id. This collapses cross-section references to the same defined term into one citation.
+3. Renumber Agent B's output: for each Agent B citation id `b` (where b ≥ 100), subtract 99 from `b` and add N — replace every `cite:b` link in the body with `cite:(N + b − 99)`, and replace every `"id": b` in the JSON with `N + b − 99`. (e.g. if N=14: cite:100→cite:15, cite:101→cite:16, …) *(Agent A is bounded at 8–12 citations, so N ≤ ~12 in practice; the gap to 100 is intentionally large to prevent collisions.)*
+4. **Deduplicate by lineId:** scan both citation arrays for entries that share any `lineId` value. For each duplicate pair, keep Agent A's id, replace **all occurrences** of Agent B's (renumbered) id in the merged body with Agent A's id, and drop the duplicate JSON entry. If Agent A and Agent B chose different anchor text for the same `lineId`, keep Agent A's JSON entry as-is and rewrite **all occurrences** of Agent B's body anchor text to match Agent A's `anchorText` before substituting the id. This collapses cross-section references to the same defined term into one citation.
 5. Merge the remaining citation entries under the same `attachmentId` key into one array.
 6. Write the merged result as the single draft file and proceed to Step 3.
 
