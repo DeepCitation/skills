@@ -123,7 +123,7 @@ Use `pageId` from `<page_number_N_index_I>` tags and `lineIds` from `<line id="N
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
-**When to use:** The question asks about 2 or more distinct topics (e.g., "key terms" AND "dissolution"). **You MUST use the parallel path — do not write both sections yourself.** The topics being "interrelated" is not a reason to skip parallelism; each agent has the full evidence text.
+**When to use:** The question asks about 2 or more distinct topics (e.g., "key terms" AND "dissolution"). A reliable heuristic: if the expected output would have two or more top-level section headings, use parallel agents. **You MUST use the parallel path — do not write both sections yourself.** The topics being "interrelated" is not a reason to skip parallelism; each agent has the full evidence text.
 **Why:** Each section can be written simultaneously by a sub-agent, cutting LLM write time roughly in half. Both sub-agents receive the same evidence text prefix, so the KV cache is shared — neither pays twice for evidence ingestion.
 
 Spawn two agents simultaneously with the Agent tool. Pass the full evidence text (copied verbatim from the summary you just read) into each agent's prompt.
@@ -133,7 +133,7 @@ Each sub-agent prompt must include:
 - The full `deepTextPromptPortion` evidence text from the summary (copy it in full)
 - The citation format rules: `[anchor](cite:N)`, fullPhrase verbatim ≤250 chars, anchorText 1–4 words contiguous substring of fullPhrase, pageId/lineIds from evidence tags
 - Their citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
-- Instruction to return: the markdown section body, then a `<<<CITATION_DATA>>>` block
+- Instruction to **begin their output with their section heading** (e.g. `## Key Financial Terms`), then the body, then a `<<<CITATION_DATA>>>` block
 
 **After both agents return — merge:**
 1. Concatenate bodies: Agent A's section first, then Agent B's section.
