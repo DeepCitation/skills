@@ -175,7 +175,7 @@ If you suspect better evidence exists, add:
 
 - **Run verify ONCE** — do not edit the draft and re-verify. Do not programmatically validate fullPhrase lengths.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
-- **Every citation id in JSON must appear in the body** — every `id` (1, 2, 3…) in `<<<CITATION_DATA>>>` must have a corresponding `[anchor](cite:N)` link in the report. No orphaned citations.
+- **Citation ids must be consistent in both directions** — every `id` (1, 2, 3…) in `<<<CITATION_DATA>>>` must have a corresponding `[anchor](cite:N)` link in the body, and every `cite:N` link in the body must have a matching `id` in the JSON block. No orphaned citations in either direction.
 - Never print/log key values; never render metadata (attachmentId, keys, lineIds) as visible content
 - Never output `<<<CITATION_DATA>>>` JSON in your response to the user — it goes ONLY in the saved draft file
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
