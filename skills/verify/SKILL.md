@@ -140,7 +140,9 @@ npx -y deepcitation verify --markdown .deepcitation/{draft}.md \
 
 Run verify ONCE — do not edit the draft and re-verify. The API handles partial matches gracefully.
 
-Options: `--style plain|report`, `--audience general|executive|technical|legal|medical`, `--theme auto|light|dark`.
+Options: `--style plain|report` (default: `report`), `--audience general|executive|technical|legal|medical` (default: `general`), `--theme auto|light|dark` (default: `auto`).
+
+If the output contains "action needed", authenticate as in Step 1 and re-run.
 
 Open the output:
 
@@ -159,7 +161,7 @@ If you suspect better evidence exists, add:
 ## Invariants
 
 - **Run verify ONCE** — do not edit the draft and re-verify. Do not programmatically validate fullPhrase lengths.
-- **Never generate citations without evidence** — if `prepare` failed (auth, network, etc.), do NOT write a report with `[N]` markers. Show the error and stop.
+- **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
 - Never print/log key values; never render metadata (attachmentId, keys, lineIds) as visible content
 - Never output `<<<CITATION_DATA>>>` JSON in your response to the user — it goes ONLY in the saved draft file
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
