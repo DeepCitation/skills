@@ -20,6 +20,7 @@ A claim cannot be its own evidence.
 | Prior chat already has claims to verify | Use existing claims as-is — do NOT rewrite them. Prepare evidence, then cite the existing text. |
 | Claims about public/official subjects, no evidence | Web-search for primary sources (legislation, official reports, studies) |
 | `[N]` markers + `<<<CITATION_DATA>>>` already exist in HTML | Skip to Step 3 with `verify --html` |
+| You prepared the claims file as evidence | Web-search for primary sources and re-prepare |
 | Ambiguous (unclear which file is claims vs evidence) | Ask the user |
 
 `prepare` is the **only** way to read evidence — it has built-in PDF, OCR, and web readers.
@@ -138,13 +139,23 @@ npx -y deepcitation verify --markdown .deepcitation/{draft}.md \
   --out {topic}-verified.html
 ```
 
+If you skipped Step 1–2 because the HTML already had `[N]` markers (triage row above), use `--html` instead:
+
+```bash
+npx -y deepcitation verify --html {existing}.html \
+  --title "Descriptive Report Title" \
+  --out {topic}-verified.html
+```
+
+Never use `verify --citations` directly — it is low-level and skips format normalization.
+
 Run verify ONCE — do not edit the draft and re-verify. The API handles partial matches gracefully.
 
 Options: `--style plain|report` (default: `report`), `--audience general|executive|technical|legal|medical` (default: `general`), `--theme auto|light|dark` (default: `auto`).
 
 If the output contains "action needed", authenticate as in Step 1 and re-run.
 
-Open the output:
+Open the output (WSL first — most users run in WSL on Windows; macOS/Linux fallbacks are silent):
 
 ```bash
 explorer.exe "$(wslpath -w "{topic}-verified.html")" 2>/dev/null || \
