@@ -8,7 +8,7 @@ Auth handling is inlined in SKILL.md. Key points:
   3. If the user pastes a key instead, run `npx -y deepcitation login --key '<key>'` then retry
 - If authentication fails after attempting login, show the error and **STOP COMPLETELY**:
   - Do NOT continue writing a report
-  - Do NOT generate citation markers `[N]`
+  - Do NOT generate citation markers (`[anchor](cite:N)`)
   - Do NOT use information from previous conversations or memory to fabricate citations
   - Your response must end after showing the auth error
 - Never use `DEEPCITATION_API_KEY=...` prefixing — `login --key` persists to credentials.json
