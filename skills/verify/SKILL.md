@@ -117,7 +117,33 @@ For each citation, think in this order (CoT):
    **Never** use the entire fullPhrase as the anchor. Never invent labels not in the text.
    **Never** use `...` or ellipsis to skip words — the anchor must be contiguous.
 
+**Reuse citations for repeated terms:** Before creating a new citation, check whether you have already cited from the same `lineId`. If yes, reuse that existing `id` — do not create a second JSON entry. A defined term (e.g., "Purchase Amount", "Common Stock") should have exactly one citation id no matter how many times it appears in the report. Aim for **8–12 citations per section maximum** — prefer reuse over exhaustive recitation.
+
 Use `pageId` from `<page_number_N_index_I>` tags and `lineIds` from `<line id="N">` tags.
+
+### Parallel generation — REQUIRED when the question has 2+ distinct sections
+
+**When to use:** The question asks about 2 or more distinct topics (e.g., "key terms" AND "dissolution"). **You MUST use the parallel path — do not write both sections yourself.** The topics being "interrelated" is not a reason to skip parallelism; each agent has the full evidence text.
+**Why:** Each section can be written simultaneously by a sub-agent, cutting LLM write time roughly in half. Both sub-agents receive the same evidence text prefix, so the KV cache is shared — neither pays twice for evidence ingestion.
+
+Spawn two agents simultaneously with the Agent tool. Pass the full evidence text (copied verbatim from the summary you just read) into each agent's prompt.
+
+Each sub-agent prompt must include:
+- Their assigned section topic and the user's original question for context
+- The full `deepTextPromptPortion` evidence text from the summary (copy it in full)
+- The citation format rules: `[anchor](cite:N)`, fullPhrase verbatim ≤250 chars, anchorText 1–4 words contiguous substring of fullPhrase, pageId/lineIds from evidence tags
+- Their citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
+- Instruction to return: the markdown section body, then a `<<<CITATION_DATA>>>` block
+
+**After both agents return — merge:**
+1. Concatenate bodies: Agent A's section first, then Agent B's section.
+2. Let N = the highest `id` value present in Agent A's `<<<CITATION_DATA>>>` block.
+3. Renumber Agent B's output: every `cite:1XX` link in the body → `cite:(N + (1XX − 99))`, and every `"id": 1XX` in the JSON → the same value. (e.g. if N=14: cite:100→cite:15, cite:101→cite:16, …)
+4. **Deduplicate by lineId:** scan both citation arrays for entries that share any `lineId` value. For each duplicate pair, keep Agent A's id, replace every occurrence of Agent B's (renumbered) id in the merged body with Agent A's id, and drop the duplicate JSON entry. This collapses cross-section references to the same defined term into one citation.
+5. Merge the remaining citation entries under the same `attachmentId` key into one array.
+6. Write the merged result as the single draft file and proceed to Step 3.
+
+**Single-topic questions:** write the report directly without spawning sub-agents.
 
 Be comprehensive — cite **every** specific detail. Structure with headings,
 tables, and lists matching the evidence. If evidence seems incomplete for the
@@ -173,6 +199,8 @@ If you suspect better evidence exists, add:
 
 ## Invariants
 
+- **Minimum tool calls** — do not make exploratory calls (ls, Glob, Grep, extra Read) between pipeline steps. Do not read files back after writing them. Single-topic pipeline: prepare → Read summary → Write draft → verify → open. Multi-topic pipeline: prepare → Read summary → [Agent A ∥ Agent B] → Write merged draft → verify → open. Complete each step once.
+- **Never run login proactively** — only run `deepcitation login` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
 - **Run verify ONCE** — do not edit the draft and re-verify. Do not programmatically validate fullPhrase lengths.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
 - **Citation ids must be consistent in both directions** — every `id` (1, 2, 3…) in `<<<CITATION_DATA>>>` must have a corresponding `[anchor](cite:N)` link in the body, and every `cite:N` link in the body must have a matching `id` in the JSON block. No orphaned citations in either direction.
