@@ -19,7 +19,7 @@ A claim cannot be its own evidence.
 | User provided a file/URL as evidence | That file/URL |
 | Prior chat already has claims to verify | Use existing claims as-is — do NOT rewrite them. Prepare evidence, then cite the existing text. |
 | Claims about public/official subjects, no evidence | Web-search for primary sources (legislation, official reports, studies) |
-| cite-link markers + `<<<CITATION_DATA>>>` already exist in HTML | Skip to Step 3 with `verify --html` |
+| `[anchor](cite:N)` markers + `<<<CITATION_DATA>>>` already exist in HTML | Skip to Step 3 with `verify --html` |
 | You prepared the claims file as evidence | Web-search for primary sources and re-prepare |
 | Ambiguous (unclear which file is claims vs evidence) | Ask the user |
 
@@ -44,7 +44,7 @@ After login succeeds, **retry the same prepare command**.
 
 **If authentication fails after attempting login, STOP COMPLETELY:**
 - Do NOT continue writing a report
-- Do NOT generate citation markers
+- Do NOT generate citation markers (`[anchor](cite:N)`)
 - Do NOT use previous conversations or memory to fabricate citations
 - Show the error and end your response
 
@@ -70,8 +70,13 @@ an evidence line number.
 
 - GOOD: `"The [Discount Rate](cite:2) is applied to the conversion price."`
 - GOOD: `"- [Junior to](cite:9) payment of outstanding indebtedness"`
+- GOOD: `"A [Dissolution Event](cite:13) means a liquidation..."` — article before term is fine; cite wraps the term
 - BAD: `"The Discount Rate is applied to the conversion price. [2]"` (old format)
 - BAD: `"The [Discount Rate is applied to the conversion price](cite:2)."` (anchor too long — use 1–3 word key term, not the whole clause)
+- BAD: `"The [discount rate](cite:2) is applied to the conversion price."` (label casing differs from `anchorText` "Discount Rate" — link label must match exactly)
+- BAD: `"- [Junior to payment of outstanding indebtedness](cite:9)"` (entire bullet over-anchored — cite wraps the key term only, not the full clause)
+- BAD: `"A [13] Dissolution Event means..."` or `"a [2] Purchase Amount on..."` — marker placed BEFORE the term; the cite link must wrap the term itself
+- BAD: `"[[2]] Purchase Amount"` or `"[[Dissolution Event](cite:13)]"` — never double-bracket the marker or the link
 
 Multiple facts in one sentence: `"The [Discount Rate](cite:2) is multiplied by the [lowest price](cite:3)."`
 
@@ -170,6 +175,7 @@ If you suspect better evidence exists, add:
 
 - **Run verify ONCE** — do not edit the draft and re-verify. Do not programmatically validate fullPhrase lengths.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
+- **Every citation id in JSON must appear in the body** — every `id` (1, 2, 3…) in `<<<CITATION_DATA>>>` must have a corresponding `[anchor](cite:N)` link in the report. No orphaned citations.
 - Never print/log key values; never render metadata (attachmentId, keys, lineIds) as visible content
 - Never output `<<<CITATION_DATA>>>` JSON in your response to the user — it goes ONLY in the saved draft file
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
