@@ -63,3 +63,11 @@ jobs:
           claude_args: >-
             --model claude-sonnet-4-6
             --allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Glob,Read"
+
+      - name: Upload Claude prompt for debugging
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-prompt
+          path: /home/runner/work/_temp/claude-prompts/claude-prompt.txt
+          if-no-files-found: warn
