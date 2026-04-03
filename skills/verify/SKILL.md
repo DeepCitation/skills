@@ -62,21 +62,42 @@ Your response IS the verification report. Write **body text only** — the CLI a
 
 Use **standard markdown only** — no raw HTML tags (`<p>`, `<br>`, `<strong>`, etc.).
 
-Wrap each cited claim in `[display label](cite:N)` syntax. Choose display labels that are **short phrases (1–5 words) appearing verbatim or near-verbatim in the evidence**. The `verify` tool auto-searches the evidence for your display label to locate the correct line. Verbatim labels produce the best highlights; light paraphrasing also works (the tool tries progressively shorter prefixes until a match is found).
+Wrap each cited claim in citation link syntax. Two formats:
+
+**Format 1 — Short verbatim term** (preferred when the key term IS readable prose):
+`[key term](cite:N)` — the display label is 1–4 words copied verbatim from evidence.
+
+**Format 2 — Readable label + anchor** (when the evidence term needs context for readability):
+`[readable label](cite:N "verbatim anchor")` — the display label reads naturally in the sentence; the quoted anchor is 1–4 words copied verbatim from evidence for the highlight.
 
 `N` is the citation's sequential **id** (1, 2, 3…) — NOT an evidence line number.
 
-- GOOD: `"The [Discount Rate](cite:2) is applied to the conversion price."` — verbatim from doc
-- GOOD: `"- [Junior to](cite:9) payment of outstanding indebtedness"` — verbatim from doc
-- GOOD: `"[pro rata distribution](cite:5)"` — doc says "distributed pro rata"; tool finds "pro rata" via truncation
-- GOOD: `"[SAFE automatically terminates](cite:6)"` — doc says "automatically terminate"; tool finds it via truncation
-- BAD: `"The Discount Rate is applied to the conversion price. [2]"` (old format)
-- BAD: `"The [Discount Rate is applied to the conversion price](cite:2)."` (display label too long — keep to 1–5 words)
-- BAD: `"- [Junior to payment of outstanding indebtedness](cite:9)"` (entire bullet over-anchored)
-- BAD: `"A [13] Dissolution Event means..."` (marker before term)
-- BAD: `"[[2]] Purchase Amount"` (double-bracket)
+### Prose-flow principle
 
-Multiple facts: `"The [Discount Rate](cite:2) is multiplied by the [lowest price](cite:3)."`
+**The display label must read naturally in the surrounding sentence.** Mentally strip the `[…]` brackets — the sentence should be grammatically correct and clear. Think of citations like hyperlinks on a webpage: the linked text is part of the sentence, not a fragment bolted on.
+
+**Cite the key term, not the clause.** Wrap the 1–3 word noun or defined term that carries the claim. The rest of the sentence is plain prose around it.
+
+- GOOD: `"The [Discount Rate](cite:2) is applied to the conversion price."` — defined term cited, sentence flows naturally
+- GOOD: `"Junior to payment of [outstanding indebtedness](cite:9 "outstanding indebtedness") and creditor claims"` — key term cited, reads as normal prose
+- GOOD: `"Distributions are made [pro rata](cite:5 "distributed pro rata") in proportion to amounts due"` — reader sees "pro rata" naturally; anchor points to evidence
+- GOOD: `"The SAFE [automatically terminates](cite:6 "automatically terminate") upon conversion"` — verb phrase cited, reads naturally
+- GOOD: `"Senior to payments for [Common Stock](cite:18)"` — defined term, flows in sentence
+- BAD: `"[Junior to](cite:9) payment of outstanding indebtedness"` — label is a dangling preposition; reads awkwardly
+- BAD: `"[On par with payments to other Safes and/or Preferred Stock](cite:6)"` — entire clause over-anchored
+- BAD: `"[Pro rata distribution if insufficient proceeds](cite:7)"` — clause fragment, not prose
+- BAD: `"The Discount Rate is applied to the conversion price. [2]"` (old format)
+- BAD: `"A [13] Dissolution Event means..."` (marker before term)
+
+**Table cells and bullet points** — the same rule applies. Each cell/bullet is a phrase that should read naturally:
+
+| Before (clause fragment) | After (prose-flow) |
+|---|---|
+| `[Junior to payment of outstanding indebtedness](cite:5)` | `Junior to payment of [outstanding indebtedness](cite:5 "outstanding indebtedness")` |
+| `[On par with payments to other Safes](cite:6)` | `On par with payments to other [Safes and/or Preferred Stock](cite:6 "other Safes")` |
+| `[Pro rata distribution if insufficient proceeds](cite:7)` | `[Pro rata](cite:7 "distributed pro rata") distribution if proceeds are insufficient` |
+
+Multiple facts: `"The [Discount Rate](cite:2) is multiplied by the [Discount Price](cite:3)."`
 
 **Reuse `(cite:N)` for repeated references** — if you already used `[label](cite:N)` for a concept, reuse `(cite:N)` rather than creating a new marker. Aim for **1 citation per distinct claim**.
 
@@ -93,7 +114,10 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the summary (copy it in full)
-- Citation format: `[display label](cite:N)` markers in the body — no JSON, no `<<<CITATION_DATA>>>`. Labels should be 1–5 words verbatim or near-verbatim from the evidence. Do NOT output citation data — it is auto-generated by the CLI.
+- Citation format: `[display label](cite:N)` or `[readable label](cite:N "verbatim anchor")` markers in the body — no JSON, no `<<<CITATION_DATA>>>`. Do NOT output citation data — it is auto-generated by the CLI.
+  - **Prose-flow rule**: the display label must read naturally in the sentence — cite the 1–3 word key term (noun/defined term), not the whole clause. Use Format 2 when the verbatim evidence term needs surrounding prose for readability.
+  - BAD: `[Junior to](cite:9) payment of indebtedness` — dangling preposition
+  - GOOD: `Junior to payment of [outstanding indebtedness](cite:9 "outstanding indebtedness")`
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - Each agent writes body only (section heading + body text, NO `<<<CITATION_DATA>>>`) and returns a one-line confirmation.
