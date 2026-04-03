@@ -44,12 +44,14 @@ After login succeeds, **retry the same prepare command**.
 **If authentication fails after attempting login, STOP COMPLETELY.**
 Show the error and end your response. Reports require verified evidence from `prepare`.
 
-Never expose API keys in commands or output.
+Never use `DEEPCITATION_API_KEY=...` env-var prefixing in commands. Never print key values in chat.
 
 Read each summary file **fully** with the Read tool (no grep, no jq — read top to bottom).
 The summary contains `attachmentId` and `deepTextPages` (evidence text with
 `<page_number_N_index_I>` and `<line id="N">` tags). Reading it into context IS the
 mechanism — having evidence text in context (even repeated) improves citation accuracy via RE2.
+
+> **CLI version:** `deepTextPages` requires the latest CLI. If your summary shows `deepTextPromptPortion` instead, update before continuing: `npm update -g deepcitation` (or re-run with `npx -y deepcitation@latest`).
 
 ## 2. Respond with citations
 
@@ -71,6 +73,8 @@ Wrap each cited claim in citation link syntax. The **display label** is what rea
 - `residential units span [Levels 2–9](cite:N 'Units 1–11 on Level 2, Units 1–10 on Levels 3')` — display: 2 words; anchor: specific enumeration
 - `[pro rata](cite:N 'distributed pro rata among holders')` — display differs from evidence phrase
 
+**Format 2 fallback:** The anchor must be a verbatim substring of the evidence. If you cannot copy the phrase exactly as it appears, use Format 1 with a short term that does appear verbatim — never paraphrase or approximate the anchor.
+
 `N` is the citation's sequential **id** (1, 2, 3…) — NOT an evidence line number.
 
 ### Citation placement rules
@@ -88,6 +92,14 @@ Wrap each cited claim in citation link syntax. The **display label** is what rea
 **One ID per fact.** N distinct claims → IDs 1…N. Never reuse an ID for a different claim, even from the same source. Reuse an ID only to re-reference the *exact same* fact later in the text.
 
 **No ranges.** `(cite:8)` and `(cite:9)` are two citations, never `(cite:8-9)`.
+
+**Common anti-patterns to avoid:**
+- `"The [Discount Rate is applied to the conversion price](cite:2)."` — anchor is a full clause; cite wraps the term only: `[Discount Rate](cite:2)`
+- `"The [discount rate](cite:2)"` — casing differs from evidence "Discount Rate"; anchor must be verbatim
+- `"- [Junior to payment of outstanding indebtedness](cite:9)"` — entire bullet over-anchored; cite wraps the noun: `[Junior to](cite:9) payment...`
+- `"A [13] Dissolution Event"` or `"[2] Purchase Amount"` — marker placed before the term; wrap the term itself
+- `"[[Dissolution Event](cite:13)]"` — never double-bracket
+- `(cite:8-9)` — never cite a range; use two separate citations
 
 **Write body text only** — citation data is auto-generated from your markers and the prepared summary.
 
@@ -107,9 +119,9 @@ Each sub-agent prompt must include:
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
-- Each agent writes body text only (section heading + cited body text) and returns a one-line confirmation.
+- Each agent writes body text only (section heading + cited body text) and returns a one-line confirmation that includes the section heading and approximate line count (e.g. "Written: ## Pet Policy — 18 lines"). If an agent returns nothing or reports failure, do not proceed to merge — report the error to the user.
 
-**After both agents complete, merge + verify in one command** (renumber, citation generation, and verification happen automatically):
+**After both agents complete, merge + verify in one command** (renumber, citation generation, and verification happen automatically). Replace `{draft}` and `{topic}` with actual names (e.g. `lease-terms-body` and `lease-terms`):
 
 ```bash
 npx -y deepcitation merge --a .deepcitation/section-a.md --b .deepcitation/section-b.md --out .deepcitation/{draft}-body.md && \
@@ -151,7 +163,9 @@ npx -y deepcitation verify --html {existing}.html \
   --out {topic}-verified.html
 ```
 
-Run verify ONCE — do not edit the draft and re-verify. The API handles partial matches gracefully.
+Run verify ONCE — do not edit the draft and re-verify. The API handles partial matches gracefully. If an anchor cannot be located in the evidence, the CLI flags it in output as unmatched — check the summary for typos or use Format 1 with a shorter verbatim term.
+
+Do not use `verify --citations` directly — it is low-level and skips format normalization.
 
 Options: `--style plain|report` (default: `report`), `--audience general|executive|technical|legal|medical` (default: `general`), `--theme auto|light|dark` (default: `auto`).
 
