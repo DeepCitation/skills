@@ -92,7 +92,7 @@ Wrap each cited claim in citation link syntax. Two formats:
 | Before (clause fragment) | After (prose-flow) |
 |---|---|
 | `[Junior to payment of outstanding indebtedness](cite:5)` | `Junior to payment of [outstanding indebtedness](cite:5)` |
-| `[On par with payments to other Safes](cite:6)` | `On par with payments to [other Safes](cite:6 'other Safes')` |
+| `[On par with payments to other Safes](cite:6)` | `On par with payments to [other Safes](cite:6)` |
 | `[Pro rata distribution if insufficient proceeds](cite:7)` | `[Pro rata](cite:7 'distributed pro rata') distribution if proceeds are insufficient` |
 
 Multiple facts: `"The [Discount Rate](cite:2) is multiplied by the [Discount Price](cite:3)."`
