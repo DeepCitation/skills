@@ -1,6 +1,6 @@
 ---
 name: verify
-description: ALWAYS execute the full DeepCitation verification workflow when /verify appears anywhere in the prompt — regardless of how the rest of the message is phrased. Triggered by /verify with a file, URL, question, or existing content. Has built-in PDF, OCR, and web readers — never attempt to read evidence files with local tools (pdftotext, pypdf, python, strings, etc.) before running this skill.
+description: ALWAYS execute the full DeepCitation verification workflow when /verify appears anywhere in the prompt — regardless of how the rest of the message is phrased. Triggered by /verify with a file, URL, question, or existing content. Has built-in PDF, OCR, and web readers — always use prepare to read evidence files.
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Agent
 ---
 
@@ -19,12 +19,11 @@ A claim cannot be its own evidence.
 | User provided a file/URL as evidence | That file/URL |
 | Prior chat already has claims to verify | Use existing claims as-is — do NOT rewrite them. Prepare evidence, then cite the existing text. |
 | Claims about public/official subjects, no evidence | Web-search for primary sources (legislation, official reports, studies) |
-| `[anchor](cite:N)` markers + `<<<CITATION_DATA>>>` already exist in HTML | Skip to Step 3 with `verify --html` |
+| Existing verified HTML with `[anchor](cite:N)` citation markers | Skip to Step 3 with `verify --html` |
 | You prepared the claims file as evidence | Web-search for primary sources and re-prepare |
 | Ambiguous (unclear which file is claims vs evidence) | Ask the user |
 
 `prepare` is the **only** way to read evidence — it has built-in PDF, OCR, and web readers.
-Never run `pdftotext`, `pypdf`, `strings`, Python, or any other tool on evidence files.
 
 ```bash
 mkdir -p .deepcitation && npx -y deepcitation prepare <file-or-url> --summary > .deepcitation/summary-<name>.txt 2>&1
@@ -42,25 +41,21 @@ This opens the browser for OAuth and waits for the callback (up to 120s).
 If the user pastes a key instead, run `npx -y deepcitation login --key '<the-key>'`.
 After login succeeds, **retry the same prepare command**.
 
-**If authentication fails after attempting login, STOP COMPLETELY:**
-- Do NOT continue writing a report
-- Do NOT generate citation markers (`[anchor](cite:N)`)
-- Do NOT use previous conversations or memory to fabricate citations
-- Show the error and end your response
+**If authentication fails after attempting login, STOP COMPLETELY.**
+Show the error and end your response. Reports require verified evidence from `prepare`.
 
-Never use `DEEPCITATION_API_KEY=...` prefixing. Never print key values in chat.
+Never expose API keys in commands or output.
 
 Read each summary file **fully** with the Read tool (no grep, no jq — read top to bottom).
 The summary contains `attachmentId` and `deepTextPages` (evidence text with
 `<page_number_N_index_I>` and `<line id="N">` tags). Reading it into context IS the
-mechanism — this mirrors `wrapCitationPrompt()` injecting evidence into the prompt.
-Having evidence text in context (even repeated) improves citation accuracy via RE2.
+mechanism — having evidence text in context (even repeated) improves citation accuracy via RE2.
 
 ## 2. Respond with citations
 
 Your response IS the verification report. Write **body text only** — the CLI auto-generates citation data.
 
-Use **standard markdown only** — no raw HTML tags (`<p>`, `<br>`, `<strong>`, etc.).
+Use **standard markdown only** — no raw HTML tags.
 
 Wrap each cited claim in citation link syntax. Two formats:
 
@@ -72,34 +67,29 @@ Wrap each cited claim in citation link syntax. Two formats:
 
 `N` is the citation's sequential **id** (1, 2, 3…) — NOT an evidence line number.
 
-### Prose-flow principle
+### Citation placement rules
 
-**The display label must read naturally in the surrounding sentence.** Mentally strip the `[…]` brackets — the sentence should be grammatically correct and clear. Think of citations like hyperlinks on a webpage: the linked text is part of the sentence, not a fragment bolted on.
+**Cite the distinctive noun — the specific, verifiable claim.** Generic section headings don't need citations; specific enumerations, measurements, and defined terms do.
+- `"the lower limit is the [upper unfinished surface of the concrete slab](cite:3)"` — the surface IS the claim
+- `"Residential units comprise [Units 1–11 Level 2, Units 1–10 Levels 3–8](cite:8)"` — the enumeration IS the claim
 
-**Cite the key term, not the clause.** Wrap the 1–4 word noun or defined term that carries the claim. The rest of the sentence is plain prose around it.
+**The label names the thing, not the claim.** Strip the brackets mentally — if the result is a complete sentence, the label is too large.
+- `[X](cite:N) is not permitted` — "X" names the thing; the claim stays in prose
+- `[X is not permitted](cite:N)` — strip brackets → complete sentence; label too large
+- `the limit is [1.80 metres](cite:N) above the slab` — the value is the claim
+- `[the limit is 1.80 metres above the slab](cite:N)` — strip brackets → complete sentence; too large
+- `Junior to payment of [senior obligations](cite:N)` — noun cited
+- `[Junior to](cite:N) payment of senior obligations` — dangling preposition; wrong
 
-- GOOD: `"The [Discount Rate](cite:2) is applied to the conversion price."` — Format 1, defined term verbatim from evidence
-- GOOD: `"Junior to payment of [outstanding indebtedness](cite:9) and creditor claims"` — Format 1, key term cited
-- GOOD: `"Distributions are made [pro rata](cite:5 'distributed pro rata') in proportion to amounts due"` — Format 2, anchor points to evidence
-- GOOD: `"The SAFE [automatically terminates](cite:6 'automatically terminate') upon conversion"` — Format 2, different tense
-- BAD: `"[Junior to](cite:9) payment of outstanding indebtedness"` — dangling preposition
-- BAD: `"[On par with payments to other Safes and/or Preferred Stock](cite:6)"` — entire clause over-anchored
-- BAD: `"[Pro rata distribution if insufficient proceeds](cite:7)"` — clause fragment, not prose
-- BAD: `"The Discount Rate is applied to the conversion price. [2]"` (old format)
 
-**Table cells and bullet points** — the same rule applies. Each cell/bullet is a phrase that should read naturally:
+**One ID per fact.** N distinct claims → IDs 1…N. Never reuse an ID for a different claim, even from the same source. Reuse an ID only to re-reference the *exact same* fact later in the text.
 
-| Before (clause fragment) | After (prose-flow) |
-|---|---|
-| `[Junior to payment of outstanding indebtedness](cite:5)` | `Junior to payment of [outstanding indebtedness](cite:5)` |
-| `[On par with payments to other Safes](cite:6)` | `On par with payments to [other Safes](cite:6)` |
-| `[Pro rata distribution if insufficient proceeds](cite:7)` | `[Pro rata](cite:7 'distributed pro rata') distribution if proceeds are insufficient` |
+**No ranges.** `(cite:8)` and `(cite:9)` are two citations, never `(cite:8-9)`.
 
-Multiple facts: `"The [Discount Rate](cite:2) is multiplied by the [Discount Price](cite:3)."`
+**Format 2 for tense/wording differences:** `[readable label](cite:N 'verbatim anchor')` — display text reads naturally; quoted anchor is verbatim from evidence.
+- `"Distributions are made [pro rata](cite:5 'distributed pro rata') among holders"` — display differs from evidence phrase
 
-**Reuse `[label](cite:N)` for repeated references** — if you already cited a concept with id N, reuse the same `[label](cite:N)` rather than creating a new id. Aim for **1 citation per distinct claim**.
-
-**Do NOT output `<<<CITATION_DATA>>>` or citation JSON** — the `verify` command auto-generates citation data from your markers + the prepared summary. Write body text only.
+**Write body text only** — citation data is auto-generated from your markers and the prepared summary.
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
@@ -112,13 +102,12 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the summary (copy it in full)
-- Citation format: `[display label](cite:N)` or `[readable label](cite:N 'verbatim anchor')` markers in the body — no JSON, no `<<<CITATION_DATA>>>`. Do NOT output citation data — it is auto-generated by the CLI.
-  - **Prose-flow rule**: the display label must read naturally in the sentence — cite the 1–4 word key term (noun/defined term), not the whole clause. Use Format 2 when you need different link text than the verbatim evidence phrase.
-  - BAD: `[Junior to](cite:9) payment of indebtedness` — dangling preposition
-  - GOOD: `Junior to payment of [outstanding indebtedness](cite:9)`
+- Citation format: `[display label](cite:N)` or `[readable label](cite:N 'verbatim anchor')` markers in the body. Write body text only — citation data is auto-generated by the CLI.
+  - **Citation rules**: cite the distinctive noun (specific enumeration, measurement, defined term) — not the predicate, not the generic heading. Close the bracket before the verb: `[X](cite:N) is not permitted`, not `[X is not permitted](cite:N)`. One unique ID per distinct fact.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
-- Each agent writes body only (section heading + body text, NO `<<<CITATION_DATA>>>`) and returns a one-line confirmation.
+- **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
+- Each agent writes body text only (section heading + cited body text) and returns a one-line confirmation.
 
 **After both agents complete, merge + verify in one command** (renumber, citation generation, and verification happen automatically):
 
@@ -130,14 +119,19 @@ npx -y deepcitation verify --markdown .deepcitation/{draft}-body.md \
 
 **Single-topic questions:** write the report body directly to `.deepcitation/{draft}-body.md`, then run `verify --markdown` on it.
 
-Be comprehensive — cite **every** specific detail. Structure with headings,
-tables, and lists matching the evidence. If evidence seems incomplete for the
-question, note what's covered and suggest the user share additional documents.
+### Comprehensiveness — answer every part of the question
+
+**Cover ALL parts of the question equally.** Multi-part questions (e.g., "What are X? What about Y?") require thorough answers for each part — not a deep answer for the easy part and a shallow answer for the harder part. Before writing, scan the full evidence for every section/schedule/appendix that addresses each sub-question.
+
+**Extract specific details.** Vague summaries fail. If the evidence contains measurements, unit numbers, defined terms, thresholds, or formulas — include them with citations. A response that says "boundaries are defined" without stating the actual boundary definitions is incomplete.
+
+**Use structured sections.** If the evidence distinguishes categories (e.g., different unit types, different event types, different parties), your response must mirror those distinctions with separate subsections or table rows — not collapse them into a single vague paragraph.
+
+Structure with headings, tables, and lists matching the evidence. If evidence seems incomplete for the question, note what's covered and suggest the user share additional documents.
 
 **What goes in each file:**
-- **Body file** (your output or from agents): markdown body with `[label](cite:N)` markers. No JSON.
-- **Your response to the user**: The full markdown report body. No JSON, no metadata.
-- NEVER output raw JSON, attachmentId, lineIds, or pageId values in your response to the user.
+- **Body file** (your output or from agents): markdown prose with `[label](cite:N)` markers.
+- **Your response to the user**: The full markdown report body — prose only.
 
 ## 3. Verify
 
@@ -156,8 +150,6 @@ npx -y deepcitation verify --html {existing}.html \
   --title "Descriptive Report Title" \
   --out {topic}-verified.html
 ```
-
-Never use `verify --citations` directly — it is low-level and skips format normalization.
 
 Run verify ONCE — do not edit the draft and re-verify. The API handles partial matches gracefully.
 
@@ -184,10 +176,11 @@ If you suspect better evidence exists, add:
 - **Minimum tool calls** — do not make exploratory calls (ls, Glob, Grep, extra Read) between pipeline steps. Do not read files back after writing them. Single-topic pipeline: prepare → Read summary → Write body → Bash(verify+open). Multi-topic pipeline: prepare → Read summary → [Agent A ∥ Agent B] → Bash(merge+verify+open). Complete each step once.
 - **Never run login proactively** — only run `deepcitation login` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
 - **Run verify ONCE** — do not edit the draft and re-verify.
-- **Do NOT output `<<<CITATION_DATA>>>` or citation JSON** — the `verify` command auto-generates citation data from your `[display label](cite:N)` markers by searching the prepared summary. Write body text only.
+- **Write body text only** — the `verify` command auto-generates citation data from your `[display label](cite:N)` markers by searching the prepared summary.
+- **Only the CLI produces HTML** — the verified HTML is created exclusively by `npx deepcitation verify`. If you cannot run the CLI, stop and report the error.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
 - **Citation density** — one citation per distinct claim; let the content and question drive the count. Avoid redundant citations for the same fact by reusing an existing `[label](cite:N)`.
-- Never print/log key values; never render metadata (attachmentId, keys, lineIds) as visible content
+- Never expose API keys or render internal metadata as visible content
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
 
 ARGUMENTS: $ARGUMENTS
