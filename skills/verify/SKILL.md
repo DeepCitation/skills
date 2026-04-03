@@ -1,6 +1,6 @@
 ---
 name: verify
-description: ALWAYS execute the full DeepCitation verification workflow when /verify appears anywhere in the prompt — regardless of how the rest of the message is phrased. Triggered by /verify with a file, URL, question, or existing content. Has built-in PDF, OCR, and web readers — never attempt to read evidence files with local tools (pdftotext, pypdf, python, strings, etc.) before running this skill.
+description: ALWAYS execute the full DeepCitation verification workflow when /verify appears anywhere in the prompt — regardless of how the rest of the message is phrased. Triggered by /verify with a file, URL, question, or existing content. Has built-in PDF, OCR, and web readers — always use prepare to read evidence files.
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Agent
 ---
 
@@ -19,12 +19,11 @@ A claim cannot be its own evidence.
 | User provided a file/URL as evidence | That file/URL |
 | Prior chat already has claims to verify | Use existing claims as-is — do NOT rewrite them. Prepare evidence, then cite the existing text. |
 | Claims about public/official subjects, no evidence | Web-search for primary sources (legislation, official reports, studies) |
-| `[anchor](cite:N)` markers + `<<<CITATION_DATA>>>` already exist in HTML | Skip to Step 3 with `verify --html` |
+| Existing verified HTML with `[anchor](cite:N)` citation markers | Skip to Step 3 with `verify --html` |
 | You prepared the claims file as evidence | Web-search for primary sources and re-prepare |
 | Ambiguous (unclear which file is claims vs evidence) | Ask the user |
 
 `prepare` is the **only** way to read evidence — it has built-in PDF, OCR, and web readers.
-Never run `pdftotext`, `pypdf`, `strings`, Python, or any other tool on evidence files.
 
 ```bash
 mkdir -p .deepcitation && npx -y deepcitation prepare <file-or-url> --summary > .deepcitation/summary-<name>.txt 2>&1
@@ -42,120 +41,109 @@ This opens the browser for OAuth and waits for the callback (up to 120s).
 If the user pastes a key instead, run `npx -y deepcitation login --key '<the-key>'`.
 After login succeeds, **retry the same prepare command**.
 
-**If authentication fails after attempting login, STOP COMPLETELY:**
-- Do NOT continue writing a report
-- Do NOT generate citation markers (`[anchor](cite:N)`)
-- Do NOT use previous conversations or memory to fabricate citations
-- Show the error and end your response
+**If authentication fails after attempting login, STOP COMPLETELY.**
+Show the error and end your response. Reports require verified evidence from `prepare`.
 
-Never use `DEEPCITATION_API_KEY=...` prefixing. Never print key values in chat.
+Never use `DEEPCITATION_API_KEY=...` env-var prefixing in commands. Never print key values in chat.
 
 Read each summary file **fully** with the Read tool (no grep, no jq — read top to bottom).
-The summary contains `attachmentId` and `deepTextPromptPortion` (evidence text with
+The summary contains `attachmentId` and `deepTextPages` (evidence text with
 `<page_number_N_index_I>` and `<line id="N">` tags). Reading it into context IS the
-mechanism — this mirrors `wrapCitationPrompt()` injecting evidence into the prompt.
-Having evidence text in context (even repeated) improves citation accuracy via RE2.
+mechanism — having evidence text in context (even repeated) improves citation accuracy via RE2.
+
+> **CLI version:** `deepTextPages` requires the latest CLI. If your summary shows `deepTextPromptPortion` instead, update before continuing: `npm update -g deepcitation` (or re-run with `npx -y deepcitation@latest`).
 
 ## 2. Respond with citations
 
-Your response IS the verification report. The citation format is below — do NOT run `verify --prompt`.
+Your response IS the verification report. Write **body text only** — the CLI auto-generates citation data.
 
-Use **standard markdown only** — no raw HTML tags (`<p>`, `<br>`, `<strong>`, etc.).
-The CLI's markdown→HTML converter handles formatting; raw tags render as literal text.
+Use **standard markdown only** — no raw HTML tags.
 
-Wrap the key phrase in citation link syntax: `[anchor text](cite:N)` — write the body first, then set `anchorText` in the JSON to exactly match the anchor text you chose in the body (same casing, same words).
+Wrap each cited claim in citation link syntax. The **display label** is what readers see in the prose — keep it short (1–4 words). The **anchor** is what the CLI uses to locate the highlight in evidence — it can be longer and must be verbatim.
 
-`N` is the citation's sequential **id** (1, 2, 3…) from the JSON block below — NOT
-an evidence line number.
+**Format 1 — Short verbatim term** (most common — when 1–4 verbatim evidence words work as natural link text):
+`[key term](cite:N)` — display label is copied verbatim from evidence; the CLI uses it as the search anchor.
+- `the limit is [1.80 metres](cite:N) above the slab`
+- `[Breeding of pets for sale](cite:N) is not permitted`
+- `[ordinary household pets](cite:N) may be kept in residential units`
 
-- GOOD: `"The [Discount Rate](cite:2) is applied to the conversion price."`
-- GOOD: `"- [Junior to](cite:9) payment of outstanding indebtedness"`
-- GOOD: `"A [Dissolution Event](cite:13) means a liquidation..."` — article before term is fine; cite wraps the term
-- BAD: `"The Discount Rate is applied to the conversion price. [2]"` (old format)
-- BAD: `"The [Discount Rate is applied to the conversion price](cite:2)."` (anchor too long — use 1–3 word key term, not the whole clause)
-- BAD: `"The [discount rate](cite:2) is applied to the conversion price."` (label casing differs from `anchorText` "Discount Rate" — link label must match exactly)
-- BAD: `"- [Junior to payment of outstanding indebtedness](cite:9)"` (entire bullet over-anchored — cite wraps the key term only, not the full clause)
-- BAD: `"A [13] Dissolution Event means..."` or `"a [2] Purchase Amount on..."` — marker placed BEFORE the term; the cite link must wrap the term itself
-- BAD: `"[[2]] Purchase Amount"` or `"[[Dissolution Event](cite:13)]"` — never double-bracket the marker or the link
+**Format 2 — Short label + longer anchor** (use when the specific claim is a long phrase — separate what readers see from what the search uses):
+`[short label](cite:N 'verbatim anchor phrase')` — display label is 1–4 words; anchor is the longer verbatim phrase from evidence that pinpoints the highlight.
+- `the lower limit is [concrete slab surface](cite:N 'upper unfinished surface of the concrete floor slab')` — display: 3 words; anchor: specific phrase
+- `residential units span [Levels 2–9](cite:N 'Units 1–11 on Level 2, Units 1–10 on Levels 3')` — display: 2 words; anchor: specific enumeration
+- `[pro rata](cite:N 'distributed pro rata among holders')` — display differs from evidence phrase
 
-Multiple facts in one sentence: `"The [Discount Rate](cite:2) is multiplied by the [lowest price](cite:3)."`
+**Format 2 fallback:** The anchor must be a verbatim substring of the evidence. If you cannot copy the phrase exactly as it appears, use Format 1 with a short term that does appear verbatim — never paraphrase or approximate the anchor.
 
-At the end, append the citation data block grouped by `attachmentId`:
+`N` is the citation's sequential **id** (1, 2, 3…) — NOT an evidence line number.
 
-```
-<<<CITATION_DATA>>>
-{
-  "ATTACHMENT_ID": [
-    {"id": 1, "reasoning": "why", "fullPhrase": "verbatim quote", "anchorText": "key phrase", "pageId": "page_number_N_index_I", "lineIds": [12]}
-  ]
-}
-<<<END_CITATION_DATA>>>
-```
+### Citation placement rules
 
-For each citation, think in this order (CoT):
-1. **reasoning** — why does this support the claim?
-2. **fullPhrase** — copy 1–2 sentences VERBATIM from evidence (≤250 chars).
-   Must be significantly longer than anchorText — it provides the surrounding context.
-3. **anchorText** — pick **1–3 words** from your fullPhrase. **Max 4 words.** This is
-   the clickable label highlighted in the evidence. It must be a contiguous verbatim
-   substring of fullPhrase. Pick the **distinctive noun or term**, not the surrounding
-   verb phrase.
+**Display labels must be 1–4 words.** Count the words before writing. If the display label would exceed 4 words, you must use Format 2 — put the longer specific phrase as the anchor, keep the display label to 4 words or fewer.
 
-   Examples — always pick the short distinctive core:
-   - "multiplied by the Discount Rate" → **"Discount Rate"** (not the verb phrase)
-   - "Purchase Amount divided by the Discount Price" → **"Discount Price"**
-   - "Junior to payment of outstanding indebtedness" → **"Junior to"**
-   - "a voluntary termination of operations" → **"voluntary termination"**
-   - "distributed pro rata in proportion to..." → **"pro rata"**
-   - "this Safe will automatically convert into..." → **"automatically convert"**
-   - "a Change of Control, a Direct Listing or an IPO" → **"Change of Control"**
-   - "not entitled, as a holder of this Safe, to vote" → **"not entitled"** (not "not entitled...to vote" — words must be adjacent)
-   - "receive a portion of Proceeds equal to the Cash-Out Amount" → **"Cash-Out Amount"** (the distinctive label, not the verb phrase)
-   - "Neither this Safe nor the rights in this Safe are transferable or assignable" → **"transferable or assignable"** ✓ | ~~"not transferable"~~ ✗ ("not" is far away from "transferable")
-   - "SAFE (Simple Agreement for Future Equity)" → **"SAFE"** ✓ | ~~"Simple Agreement for Future Equity"~~ ✗ (use the abbreviation, not the 5-word expansion)
+**The label names the thing, not the claim.** Strip the brackets mentally — if the result is a complete sentence, the label is too large.
+- `[X](cite:N) is not permitted` — "X" names the thing; the claim stays in prose
+- `[X is not permitted](cite:N)` — strip brackets → complete sentence; label too large
+- `the limit is [1.80 metres](cite:N) above the slab` — the value is the claim
+- `[the limit is 1.80 metres above the slab](cite:N)` — strip brackets → complete sentence; too large
+- `Junior to payment of [senior obligations](cite:N)` — noun cited
+- `[Junior to](cite:N) payment of senior obligations` — dangling preposition; wrong
 
-   **Never** use the entire fullPhrase as the anchor. Never invent labels not in the text.
-   **Never** use `...` or ellipsis to skip words — the anchor must be contiguous.
+**One ID per fact.** N distinct claims → IDs 1…N. Never reuse an ID for a different claim, even from the same source. Reuse an ID only to re-reference the *exact same* fact later in the text.
 
-**Reuse citations for repeated terms:** Before creating a new citation, check whether you have already cited from the same `lineId`. If yes, reuse that existing `id` — do not create a second JSON entry. A defined term (e.g., "Purchase Amount", "Common Stock") should have exactly one citation id no matter how many times it appears in the report. Exception: if the `fullPhrase` you need is genuinely different from the existing citation for that `lineId` (e.g., the line defines two separate facts), a new id is still appropriate. Aim for **8–12 citations per section maximum** — prefer reuse over exhaustive recitation.
+**No ranges.** `(cite:8)` and `(cite:9)` are two citations, never `(cite:8-9)`.
 
-Use `pageId` from `<page_number_N_index_I>` tags and `lineIds` from `<line id="N">` tags.
+**Common anti-patterns to avoid:**
+- `"The [Discount Rate is applied to the conversion price](cite:2)."` — anchor is a full clause; cite wraps the term only: `[Discount Rate](cite:2)`
+- `"The [discount rate](cite:2)"` — casing differs from evidence "Discount Rate"; anchor must be verbatim
+- `"- [Junior to payment of outstanding indebtedness](cite:9)"` — entire bullet over-anchored; cite wraps the noun: `[Junior to](cite:9) payment...`
+- `"A [13] Dissolution Event"` or `"[2] Purchase Amount"` — marker placed before the term; wrap the term itself
+- `"[[Dissolution Event](cite:13)]"` — never double-bracket
+- `(cite:8-9)` — never cite a range; use two separate citations
+
+**Write body text only** — citation data is auto-generated from your markers and the prepared summary.
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
-**When to use:** The question asks about 2 or more distinct topics (e.g., "key terms" AND "dissolution"). A reliable heuristic: if the expected output would have two or more top-level section headings, use parallel agents. **You MUST use the parallel path — do not write both sections yourself.** The topics being "interrelated" is not a reason to skip parallelism; each agent has the full evidence text.
-**Why:** Each section can be written simultaneously by a sub-agent, cutting LLM write time roughly in half. Both sub-agents receive the same evidence text prefix, so the KV cache is shared — neither pays twice for evidence ingestion.
+**When to use:** The question asks about 2 or more distinct topics. If the expected output has two or more top-level section headings, use parallel agents. **You MUST use the parallel path when the Agent tool is available.**
 
-Spawn two agents simultaneously with the Agent tool. Pass the full evidence text (copied verbatim from the summary you just read) into each agent's prompt.
+**If the Agent tool is unavailable**, write both sections yourself in sequence.
+
+Spawn two agents simultaneously. Pass the full evidence text (copied verbatim from the summary) into each agent's prompt.
 
 Each sub-agent prompt must include:
-- Their assigned section topic and the user's original question for context
-- The full `deepTextPromptPortion` evidence text from the summary (copy it in full)
-- The citation format rules: `[anchor](cite:N)`, fullPhrase verbatim ≤250 chars, anchorText 1–4 words contiguous substring of fullPhrase, pageId/lineIds from evidence tags
-- Their citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
-- Instruction to **begin their output with their section heading** (e.g. `## Key Financial Terms`), then the body, then a `<<<CITATION_DATA>>>` block
+- Their assigned section topic and the user's original question
+- The full `deepTextPages` evidence text from the summary (copy it in full)
+- Citation format: `[display label](cite:N)` or `[short label](cite:N 'verbatim anchor')` markers in the body. Write body text only — citation data is auto-generated by the CLI.
+  - **Citation rules**: display labels must be 1–4 words. For long specific phrases (definitions, enumerations), use Format 2 with a short display label and the longer verbatim phrase as the anchor. Cite the distinctive noun — not the predicate. Close the bracket before the verb: `[X](cite:N) is not permitted`, not `[X is not permitted](cite:N)`. One unique ID per distinct fact.
+- Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
+- File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
+- **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
+- Each agent writes body text only (section heading + cited body text) and returns a one-line confirmation that includes the section heading and approximate line count (e.g. "Written: ## Pet Policy — 18 lines"). If an agent returns nothing or reports failure, do not proceed to merge — report the error to the user.
 
-**After both agents return — merge:**
-1. Concatenate bodies: Agent A's section first, then Agent B's section.
-2. Let N = the highest `id` value present in Agent A's `<<<CITATION_DATA>>>` block.
-3. Renumber Agent B's output: for each Agent B citation id `b` (where b ≥ 100), subtract 99 from `b` and add N — replace every `cite:b` link in the body with `cite:(N + b − 99)`, and replace every `"id": b` in the JSON with `N + b − 99`. (e.g. if N=14: cite:100→cite:15, cite:101→cite:16, …) *(Agent A is bounded at 8–12 citations, so N ≤ ~12 in practice; the gap to 100 is intentionally large to prevent collisions.)*
-4. **Deduplicate by lineId:** scan both citation arrays for entries that share any `lineId` value. For each duplicate pair, keep Agent A's id, replace **all occurrences** of Agent B's (renumbered) id in the merged body with Agent A's id, and drop the duplicate JSON entry. If Agent A and Agent B chose different anchor text for the same `lineId`, keep Agent A's JSON entry as-is and rewrite **all occurrences** of Agent B's body anchor text to match Agent A's `anchorText` before substituting the id. This collapses cross-section references to the same defined term into one citation.
-5. Merge the remaining citation entries under the same `attachmentId` key into one array.
-6. Write the merged result as the single draft file and proceed to Step 3.
+**After both agents complete, merge + verify in one command** (renumber, citation generation, and verification happen automatically). Replace `{draft}` and `{topic}` with actual names (e.g. `lease-terms-body` and `lease-terms`):
 
-**Single-topic questions:** write the report directly without spawning sub-agents.
+```bash
+npx -y deepcitation merge --a .deepcitation/section-a.md --b .deepcitation/section-b.md --out .deepcitation/{draft}-body.md && \
+npx -y deepcitation verify --markdown .deepcitation/{draft}-body.md \
+  --title "Descriptive Report Title" --out {topic}-verified.html
+```
 
-Be comprehensive — cite **every** specific detail. Structure with headings,
-tables, and lists matching the evidence. If evidence seems incomplete for the
-question, note what's covered and suggest the user share additional documents.
+**Single-topic questions:** write the report body directly to `.deepcitation/{draft}-body.md`, then run `verify --markdown` on it.
 
-Choose a descriptive report filename based on the topic (e.g., `yc-safe-analysis.md`,
-`q4-revenue-review.md`). Save the draft in `.deepcitation/` (scratch space).
+### Comprehensiveness — answer every part of the question
 
-**What the user sees vs. what the file contains:**
-- **Print to the user**: Only the markdown report body (headings, paragraphs, citation links). No JSON.
-- **Save to the file**: Report body + `<<<CITATION_DATA>>>` JSON block at the end.
-- NEVER output raw JSON, attachmentId, lineIds, or pageId values in your response to the user.
+**Cover ALL parts of the question equally.** Multi-part questions (e.g., "What are X? What about Y?") require thorough answers for each part — not a deep answer for the easy part and a shallow answer for the harder part. Before writing, scan the full evidence for every section/schedule/appendix that addresses each sub-question.
+
+**Extract specific details.** Vague summaries fail. If the evidence contains measurements, unit numbers, defined terms, thresholds, or formulas — include them with citations. A response that says "boundaries are defined" without stating the actual boundary definitions is incomplete.
+
+**Use structured sections.** If the evidence distinguishes categories (e.g., different unit types, different event types, different parties), your response must mirror those distinctions with separate subsections or table rows — not collapse them into a single vague paragraph.
+
+Structure with headings, tables, and lists matching the evidence. If evidence seems incomplete for the question, note what's covered and suggest the user share additional documents.
+
+**What goes in each file:**
+- **Body file** (your output or from agents): markdown prose with `[label](cite:N)` markers.
+- **Your response to the user**: The full markdown report body — prose only.
 
 ## 3. Verify
 
@@ -175,9 +163,9 @@ npx -y deepcitation verify --html {existing}.html \
   --out {topic}-verified.html
 ```
 
-Never use `verify --citations` directly — it is low-level and skips format normalization.
+Run verify ONCE — do not edit the draft and re-verify. The API handles partial matches gracefully. If an anchor cannot be located in the evidence, the CLI flags it in output as unmatched — check the summary for typos or use Format 1 with a shorter verbatim term.
 
-Run verify ONCE — do not edit the draft and re-verify. The API handles partial matches gracefully.
+Do not use `verify --citations` directly — it is low-level and skips format normalization.
 
 Options: `--style plain|report` (default: `report`), `--audience general|executive|technical|legal|medical` (default: `general`), `--theme auto|light|dark` (default: `auto`).
 
@@ -199,14 +187,14 @@ If you suspect better evidence exists, add:
 
 ## Invariants
 
-- **Minimum tool calls** — do not make exploratory calls (ls, Glob, Grep, extra Read) between pipeline steps. Do not read files back after writing them. Single-topic pipeline: prepare → Read summary → Write draft → verify → open. Multi-topic pipeline: prepare → Read summary → [Agent A ∥ Agent B] → Write merged draft → verify → open. Complete each step once.
+- **Minimum tool calls** — do not make exploratory calls (ls, Glob, Grep, extra Read) between pipeline steps. Do not read files back after writing them. Single-topic pipeline: prepare → Read summary → Write body → Bash(verify+open). Multi-topic pipeline: prepare → Read summary → [Agent A ∥ Agent B] → Bash(merge+verify+open). Complete each step once.
 - **Never run login proactively** — only run `deepcitation login` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
-- **Run verify ONCE** — do not edit the draft and re-verify. Do not programmatically validate fullPhrase lengths.
+- **Run verify ONCE** — do not edit the draft and re-verify.
+- **Write body text only** — the `verify` command auto-generates citation data from your `[display label](cite:N)` markers by searching the prepared summary.
+- **Only the CLI produces HTML** — the verified HTML is created exclusively by `npx deepcitation verify`. If you cannot run the CLI, stop and report the error.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
-- **Citation ids must be consistent in both directions** — every `id` (1, 2, 3…) in `<<<CITATION_DATA>>>` must have a corresponding `[anchor](cite:N)` link in the body, and every `cite:N` link in the body must have a matching `id` in the JSON block. No orphaned citations in either direction.
-- **Citation density** — aim for 8–12 citations per section; prefer reuse of an existing id over creating a new one for the same `lineId`.
-- Never print/log key values; never render metadata (attachmentId, keys, lineIds) as visible content
-- Never output `<<<CITATION_DATA>>>` JSON in your response to the user — it goes ONLY in the saved draft file
+- **Citation density** — one citation per distinct claim; let the content and question drive the count. Avoid redundant citations for the same fact by reusing an existing `[label](cite:N)`.
+- Never expose API keys or render internal metadata as visible content
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
 
 ARGUMENTS: $ARGUMENTS
