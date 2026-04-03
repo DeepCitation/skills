@@ -64,11 +64,11 @@ Use **standard markdown only** — no raw HTML tags (`<p>`, `<br>`, `<strong>`, 
 
 Wrap each cited claim in citation link syntax. Two formats:
 
-**Format 1 — Short verbatim term** (preferred when the key term IS readable prose):
-`[key term](cite:N)` — the display label is 1–4 words copied verbatim from evidence.
+**Format 1 — Short verbatim term** (use when the verbatim evidence phrase works as natural link text):
+`[key term](cite:N)` — the display label is 1–4 words copied verbatim from evidence. The CLI uses the display label as the search anchor to locate the highlight in evidence.
 
-**Format 2 — Readable label + anchor** (when the evidence term needs context for readability):
-`[readable label](cite:N "verbatim anchor")` — the display label reads naturally in the sentence; the quoted anchor is 1–4 words copied verbatim from evidence for the highlight.
+**Format 2 — Readable label + anchor** (use when you want different link text than the verbatim evidence phrase, e.g., different tense, added preposition, or longer prose reading):
+`[readable label](cite:N 'verbatim anchor')` — the display label reads naturally in the sentence; the single-quoted anchor is 1–4 words that must appear as a contiguous verbatim substring in the evidence text (no paraphrasing, no ellipsis). The CLI uses the anchor (not the display label) for the highlight.
 
 `N` is the citation's sequential **id** (1, 2, 3…) — NOT an evidence line number.
 
@@ -76,30 +76,28 @@ Wrap each cited claim in citation link syntax. Two formats:
 
 **The display label must read naturally in the surrounding sentence.** Mentally strip the `[…]` brackets — the sentence should be grammatically correct and clear. Think of citations like hyperlinks on a webpage: the linked text is part of the sentence, not a fragment bolted on.
 
-**Cite the key term, not the clause.** Wrap the 1–3 word noun or defined term that carries the claim. The rest of the sentence is plain prose around it.
+**Cite the key term, not the clause.** Wrap the 1–4 word noun or defined term that carries the claim. The rest of the sentence is plain prose around it.
 
-- GOOD: `"The [Discount Rate](cite:2) is applied to the conversion price."` — defined term cited, sentence flows naturally
-- GOOD: `"Junior to payment of [outstanding indebtedness](cite:9 "outstanding indebtedness") and creditor claims"` — key term cited, reads as normal prose
-- GOOD: `"Distributions are made [pro rata](cite:5 "distributed pro rata") in proportion to amounts due"` — reader sees "pro rata" naturally; anchor points to evidence
-- GOOD: `"The SAFE [automatically terminates](cite:6 "automatically terminate") upon conversion"` — verb phrase cited, reads naturally
-- GOOD: `"Senior to payments for [Common Stock](cite:18)"` — defined term, flows in sentence
-- BAD: `"[Junior to](cite:9) payment of outstanding indebtedness"` — label is a dangling preposition; reads awkwardly
+- GOOD: `"The [Discount Rate](cite:2) is applied to the conversion price."` — Format 1, defined term verbatim from evidence
+- GOOD: `"Junior to payment of [outstanding indebtedness](cite:9) and creditor claims"` — Format 1, key term cited
+- GOOD: `"Distributions are made [pro rata](cite:5 'distributed pro rata') in proportion to amounts due"` — Format 2, anchor points to evidence
+- GOOD: `"The SAFE [automatically terminates](cite:6 'automatically terminate') upon conversion"` — Format 2, different tense
+- BAD: `"[Junior to](cite:9) payment of outstanding indebtedness"` — dangling preposition
 - BAD: `"[On par with payments to other Safes and/or Preferred Stock](cite:6)"` — entire clause over-anchored
 - BAD: `"[Pro rata distribution if insufficient proceeds](cite:7)"` — clause fragment, not prose
 - BAD: `"The Discount Rate is applied to the conversion price. [2]"` (old format)
-- BAD: `"A [13] Dissolution Event means..."` (marker before term)
 
 **Table cells and bullet points** — the same rule applies. Each cell/bullet is a phrase that should read naturally:
 
 | Before (clause fragment) | After (prose-flow) |
 |---|---|
-| `[Junior to payment of outstanding indebtedness](cite:5)` | `Junior to payment of [outstanding indebtedness](cite:5 "outstanding indebtedness")` |
-| `[On par with payments to other Safes](cite:6)` | `On par with payments to other [Safes and/or Preferred Stock](cite:6 "other Safes")` |
-| `[Pro rata distribution if insufficient proceeds](cite:7)` | `[Pro rata](cite:7 "distributed pro rata") distribution if proceeds are insufficient` |
+| `[Junior to payment of outstanding indebtedness](cite:5)` | `Junior to payment of [outstanding indebtedness](cite:5)` |
+| `[On par with payments to other Safes](cite:6)` | `On par with payments to [other Safes](cite:6 'other Safes')` |
+| `[Pro rata distribution if insufficient proceeds](cite:7)` | `[Pro rata](cite:7 'distributed pro rata') distribution if proceeds are insufficient` |
 
 Multiple facts: `"The [Discount Rate](cite:2) is multiplied by the [Discount Price](cite:3)."`
 
-**Reuse `(cite:N)` for repeated references** — if you already used `[label](cite:N)` for a concept, reuse `(cite:N)` rather than creating a new marker. Aim for **1 citation per distinct claim**.
+**Reuse `[label](cite:N)` for repeated references** — if you already cited a concept with id N, reuse the same `[label](cite:N)` rather than creating a new id. Aim for **1 citation per distinct claim**.
 
 **Do NOT output `<<<CITATION_DATA>>>` or citation JSON** — the `verify` command auto-generates citation data from your markers + the prepared summary. Write body text only.
 
@@ -114,10 +112,10 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the summary (copy it in full)
-- Citation format: `[display label](cite:N)` or `[readable label](cite:N "verbatim anchor")` markers in the body — no JSON, no `<<<CITATION_DATA>>>`. Do NOT output citation data — it is auto-generated by the CLI.
-  - **Prose-flow rule**: the display label must read naturally in the sentence — cite the 1–3 word key term (noun/defined term), not the whole clause. Use Format 2 when the verbatim evidence term needs surrounding prose for readability.
+- Citation format: `[display label](cite:N)` or `[readable label](cite:N 'verbatim anchor')` markers in the body — no JSON, no `<<<CITATION_DATA>>>`. Do NOT output citation data — it is auto-generated by the CLI.
+  - **Prose-flow rule**: the display label must read naturally in the sentence — cite the 1–4 word key term (noun/defined term), not the whole clause. Use Format 2 when you need different link text than the verbatim evidence phrase.
   - BAD: `[Junior to](cite:9) payment of indebtedness` — dangling preposition
-  - GOOD: `Junior to payment of [outstanding indebtedness](cite:9 "outstanding indebtedness")`
+  - GOOD: `Junior to payment of [outstanding indebtedness](cite:9)`
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - Each agent writes body only (section heading + body text, NO `<<<CITATION_DATA>>>`) and returns a one-line confirmation.
@@ -186,9 +184,9 @@ If you suspect better evidence exists, add:
 - **Minimum tool calls** — do not make exploratory calls (ls, Glob, Grep, extra Read) between pipeline steps. Do not read files back after writing them. Single-topic pipeline: prepare → Read summary → Write body → Bash(verify+open). Multi-topic pipeline: prepare → Read summary → [Agent A ∥ Agent B] → Bash(merge+verify+open). Complete each step once.
 - **Never run login proactively** — only run `deepcitation login` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
 - **Run verify ONCE** — do not edit the draft and re-verify.
-- **Do not output citation JSON** — no `<<<CITATION_DATA>>>` block, no JSON data. The `verify` command auto-generates citation data from your `[display label](cite:N)` markers by searching the prepared summary. Write body text only.
+- **Do NOT output `<<<CITATION_DATA>>>` or citation JSON** — the `verify` command auto-generates citation data from your `[display label](cite:N)` markers by searching the prepared summary. Write body text only.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
-- **Citation density** — one citation per distinct claim; let the content and question drive the count. Avoid redundant citations for the same fact by reuse of an existing `(cite:N)`.
+- **Citation density** — one citation per distinct claim; let the content and question drive the count. Avoid redundant citations for the same fact by reusing an existing `[label](cite:N)`.
 - Never print/log key values; never render metadata (attachmentId, keys, lineIds) as visible content
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
 
