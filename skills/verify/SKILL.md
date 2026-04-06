@@ -57,53 +57,37 @@ mechanism — having evidence text in context (even repeated) improves citation 
 
 ## 2. Respond with citations
 
-Your response IS the verification report. Write **body text only** — the CLI auto-generates citation data.
+Your response IS the verification report. Write body text with citation markers, then append a `<<<CITATION_DATA>>>` JSON block with coordinates.
 
 Use **standard markdown only** — no raw HTML tags.
 
-Wrap each cited claim in citation link syntax. The **display label** is what readers see in the prose — keep it short (1–4 words). The **anchor** is what the CLI uses to locate the highlight in evidence — it can be longer and must be verbatim.
+### In-text markers
 
-**Format 1 — Short verbatim term** (most common — when 1–4 verbatim evidence words work as natural link text):
-`[key term](cite:N)` — display label is copied verbatim from evidence; the CLI uses it as the search anchor.
-- `the limit is [1.80 metres](cite:N) above the slab`
-- `[Breeding of pets for sale](cite:N) is not permitted`
-- `[ordinary household pets](cite:N) may be kept in residential units`
+Write naturally and **bold** the 1–4 word name of each key fact — a specific name, value, or right. Not the surrounding clause, just the core term. Bold text minimizes cognitive load for the reader: they scan the bolded terms to quickly grasp the key facts without reading every word. Then wrap each bolded term as a citation link: `[bolded term](cite:N)` where N is the sequential citation number (1, 2, 3…). One unique ID per distinct fact.
 
-**Format 2 — Short label + longer anchor** (use when the specific claim is a long phrase — separate what readers see from what the search uses):
-`[short label](cite:N 'verbatim anchor phrase')` — display label is 1–4 words; anchor is the longer verbatim phrase from evidence that pinpoints the highlight.
-- `the lower limit is [concrete slab surface](cite:N 'upper unfinished surface of the concrete floor slab')` — display: 3 words; anchor: specific phrase
-- `residential units span [Levels 2–9](cite:N 'Units 1–11 on Level 2, Units 1–10 on Levels 3')` — display: 2 words; anchor: specific enumeration
-- `[pro rata](cite:N 'distributed pro rata among holders')` — display differs from evidence phrase
+Example: The invoice totals [USD 4,350.00](cite:1) for services rendered by [Acme Corp](cite:2) on [March 15, 2024](cite:3).
 
-**Format 2 fallback:** The anchor must be a verbatim substring of the evidence. If you cannot copy the phrase exactly as it appears, use Format 1 with a short term that does appear verbatim — never paraphrase or approximate the anchor.
+### Citation data block
 
-`N` is the citation's sequential **id** (1, 2, 3…) — NOT an evidence line number.
+After the body text, append a `<<<CITATION_DATA>>>` block with coordinates for each citation. The CLI uses these to locate the exact evidence — no heuristic search.
 
-### Citation placement rules
+`anchor_text` = the bolded term you cited. Must be verbatim from the evidence. The CLI automatically fills `full_phrase` (the surrounding sentence) from your `page_id` and `line_ids` coordinates.
 
-**Display labels must be 1–4 words.** Count the words before writing. If the display label would exceed 4 words, you must use Format 2 — put the longer specific phrase as the anchor, keep the display label to 4 words or fewer.
+Read `page_id` from `<page_number_N_index_I>` tags and `line_ids` from `<line id="N">` tags in the summary.
 
-**The label names the thing, not the claim.** Strip the brackets mentally — if the result is a complete sentence, the label is too large.
-- `[X](cite:N) is not permitted` — "X" names the thing; the claim stays in prose
-- `[X is not permitted](cite:N)` — strip brackets → complete sentence; label too large
-- `the limit is [1.80 metres](cite:N) above the slab` — the value is the claim
-- `[the limit is 1.80 metres above the slab](cite:N)` — strip brackets → complete sentence; too large
-- `Junior to payment of [senior obligations](cite:N)` — noun cited
-- `[Junior to](cite:N) payment of senior obligations` — dangling preposition; wrong
+```
+<<<CITATION_DATA>>>
+{
+  "ATTACHMENT_ID": [
+    {"id": 1, "anchor_text": "USD 4,350.00", "page_id": "page_number_1_index_0", "line_ids": [14]},
+    {"id": 2, "anchor_text": "Acme Corp", "page_id": "page_number_1_index_0", "line_ids": [3]},
+    {"id": 3, "anchor_text": "March 15, 2024", "page_id": "page_number_1_index_0", "line_ids": [5]}
+  ]
+}
+<<<END_CITATION_DATA>>>
+```
 
-**One ID per fact.** N distinct claims → IDs 1…N. Never reuse an ID for a different claim, even from the same source. Reuse an ID only to re-reference the *exact same* fact later in the text.
-
-**No ranges.** `(cite:8)` and `(cite:9)` are two citations, never `(cite:8-9)`.
-
-**Common anti-patterns to avoid:**
-- `"The [Discount Rate is applied to the conversion price](cite:2)."` — anchor is a full clause; cite wraps the term only: `[Discount Rate](cite:2)`
-- `"The [discount rate](cite:2)"` — casing differs from evidence "Discount Rate"; anchor must be verbatim
-- `"- [Junior to payment of outstanding indebtedness](cite:9)"` — entire bullet over-anchored; cite wraps the noun: `[Junior to](cite:9) payment...`
-- `"A [13] Dissolution Event"` or `"[2] Purchase Amount"` — marker placed before the term; wrap the term itself
-- `"[[Dissolution Event](cite:13)]"` — never double-bracket
-- `(cite:8-9)` — never cite a range; use two separate citations
-
-**Write body text only** — citation data is auto-generated from your markers and the prepared summary.
+Use the `attachmentId` from the summary JSON as the group key. Each entry needs `id`, `anchor_text`, `page_id`, and `line_ids`.
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
@@ -116,8 +100,7 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the summary (copy it in full)
-- Citation format: `[display label](cite:N)` or `[short label](cite:N 'verbatim anchor')` markers in the body. Write body text only — citation data is auto-generated by the CLI.
-  - **Citation rules**: display labels must be 1–4 words. For long specific phrases (definitions, enumerations), use Format 2 with a short display label and the longer verbatim phrase as the anchor. Cite the distinctive noun — not the predicate. Close the bracket before the verb: `[X](cite:N) is not permitted`, not `[X is not permitted](cite:N)`. One unique ID per distinct fact.
+- Citation format: **bold** key figures, values, names, and entities from the evidence — not labels, just the terms. Then wrap each bolded term as `[bolded term](cite:N)`. After the body, append a `<<<CITATION_DATA>>>` block with `id`, `anchor_text` (= the bolded term, verbatim from evidence), `page_id` (from `<page_number_N_index_I>` tags), and `line_ids` (from `<line id="N">` tags). The CLI fills `full_phrase` automatically. One unique ID per distinct fact.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
