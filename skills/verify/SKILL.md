@@ -65,40 +65,52 @@ Use **standard markdown only** — no raw HTML tags.
 
 The reader experiences citations in three layers — each adds detail:
 
-1. **Scan** — they skim the bolded terms to grasp the key facts without reading every word. Bold only the 1–4 word name of the fact, not the surrounding clause.
-2. **Highlight** — they click and see `k` highlighted in yellow in the original evidence. A short highlight is precise; a full sentence in yellow is unreadable.
-3. **Explore** — the popover shows the full evidence paragraph for deep reading. The agent does not control this layer — it comes from `l` (line IDs).
+1. **Scan** — they skim the bolded terms to grasp the key facts. The bold text IS the verbatim source phrase — 1–4 exact words from the evidence.
+2. **Highlight** — they click the bold term and see THOSE SAME WORDS highlighted in yellow in the evidence popover. The popover shows the full evidence paragraph (from `l` line IDs) with the anchor (`k`) highlighted in amber within it. If `k` = the entire paragraph, **no highlight is shown** — the anchor drowns in its own context.
+3. **Explore** — the keyhole strip shows the anchor region in the original PDF image at readable size. Short anchors (1–4 words) stay crisp; very long anchors spread across the image and may lose readability.
 
-Short terms at Layer 1 invite the reader to click — each click reveals a precise yellow highlight (Layer 2) and then the full evidence paragraph (Layer 3). This progressive reveal builds trust and keeps the report scannable.
+**Hard rules** (all three must be satisfied — no trade-offs):
+1. **Connection**: bold text and `k` must be identical (Format 1). The reader clicks the bold term and sees those exact words highlighted.
+2. **Brevity**: bold text and `k` must be **≤4 words**. This is a HARD LIMIT, not a suggestion. When the evidence phrase is longer, truncate to the 2–3 most distinctive words — see examples below.
+3. **Context**: `l` must include the anchor's line PLUS 1–2 adjacent lines, so the evidence paragraph is longer than the anchor. This makes the highlight visible within surrounding text.
 
 ### In-text markers
 
-**Bold** the 1–4 word name of each key fact — a claim, value, fact, entity, date, or price. Name the topic, not the clause around it — let the surrounding prose carry context. Place a citation marker `[N]` immediately after each bolded term, where N is the sequential citation number (1, 2, 3…). One unique ID per distinct fact.
+**Bold** 1–4 verbatim words from the evidence. The bold text must appear verbatim in the source — but you pick only the shortest distinctive substring (≤4 words), not the full phrase. Place `[N]` immediately after. One unique ID per distinct fact.
 
 Example: The invoice totals **USD 4,350.00** [1] for services rendered by **Acme Corp** [2] on **March 15, 2024** [3].
 
-Common mistake: writing "**the obligation to pay within 30 days**" (7 words, includes the framing clause) instead of "**30-day payment**" (2 words, names the topic). The prose already says "the vendor has an obligation" — the bold term should not repeat it.
+**How to truncate long evidence phrases to ≤4 words:**
+- "Junior to payment of outstanding indebtedness and creditor claims" → pick **Junior to payment** (3w) or **outstanding indebtedness** (2w) — the distinctive core
+- "immediately following the earliest to occur of" → pick **earliest to occur** (3w)
+- "without relieving the Company of any obligations arising from a prior breach" → pick **prior breach** (2w)
+- "due and payable to the Investor immediately prior to the consummation" → pick **due and payable** (3w)
+- "general assignment for the benefit of the Company's creditors" → pick **general assignment** (2w)
+
+Pick the 2-3 words that a reader would recognize as the key term — the noun/concept, not the full clause.
 
 ### Citation data block
 
-After the body text, append a `<<<CITATION_DATA>>>` block. The bold text is the display label (Layer 1) — `k` is the Layer 2 highlight: the 1–4 word phrase that gets highlighted in yellow in the source evidence.
+After the body text, append a `<<<CITATION_DATA>>>` block. **`k` must equal the bold text exactly** — they are the same 1–4 verbatim words from the evidence. NEVER more than 4 words in either bold or `k`.
 
 Keys:
 
 - **n**: Citation id (integer, matches `[N]` in text)
-- **k**: 1–4 verbatim words from the evidence line (NEVER more than 4). This is the Layer 2 highlight — pick the distinctive noun or term, not the surrounding verb phrase. Drop leading articles ("the", "a") — start with the concrete term.
-  - BAD: `"k": "the total amount due for services rendered"` (7 words — copies the clause, yellow highlight unreadable)
-  - GOOD: `"k": "amount due"` (2 words — precise highlight, reader clicks to explore)
+- **k**: Must equal the bold text in the body exactly — 1–4 verbatim words. NEVER more than 4.
+  - BAD: bold = `"Junior to payment of outstanding indebtedness"` (6 words) — too long
+  - GOOD: bold = `"outstanding indebtedness"` and k = `"outstanding indebtedness"` (identical, 2w, verbatim) ✓
+  - BAD: bold = `"Equity Financing"` but k = `"when the company raises capital"` (bold ≠ k, different words)
+  - GOOD: bold = `"Equity Financing"` and k = `"Equity Financing"` (identical) ✓
 - **p**: Compact page id `"N_I"` (from `<page_number_N_index_I>` tag)
-- **l**: Array of line IDs (from `<line id="N">` tags)
+- **l**: Array of line IDs (from `<line id="N">` tags). **Include the anchor's line PLUS 1–2 adjacent lines** so the evidence paragraph has context around the highlight. If the anchor is on line 20, use `[19, 20, 21]` or at minimum `[19, 20]`. A single-line `l` risks the anchor filling the entire paragraph — which renders with **no visible highlight**.
 
 ```
 <<<CITATION_DATA>>>
 {
   "ATTACHMENT_ID": [
-    {"n": 1, "k": "USD 4,350.00", "p": "1_0", "l": [14]},
-    {"n": 2, "k": "Acme Corp", "p": "1_0", "l": [3]},
-    {"n": 3, "k": "March 15, 2024", "p": "1_0", "l": [5]}
+    {"n": 1, "k": "USD 4,350.00", "p": "1_0", "l": [13, 14, 15]},
+    {"n": 2, "k": "Acme Corp", "p": "1_0", "l": [2, 3, 4]},
+    {"n": 3, "k": "March 15, 2024", "p": "1_0", "l": [4, 5, 6]}
   ]
 }
 <<<END_CITATION_DATA>>>
@@ -117,7 +129,7 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the summary (copy it in full)
-- Citation format: **bold** the 1–4 word name of each key fact — a claim, value, fact, entity, date, or price. Not the surrounding clause, just the core term. Bold text minimizes cognitive load: readers scan bolded terms to quickly grasp key facts. Place `[N]` after each bolded term. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (1–4 verbatim words from evidence, NEVER more than 4 — the distinctive noun/term, not the verb phrase — drop leading "the"/"a" — highlighted in yellow), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array from `<line id="N">`). One unique ID per distinct fact.
+- Citation format: **bold** 1–4 verbatim words from the evidence — the exact source phrase. Place `[N]` after each bolded term. **`k` in CITATION_DATA must equal the bold text exactly** — they are the same verbatim phrase. The reader clicks the bold term and sees those same words highlighted. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (must equal bold text — 1–4 verbatim words, NEVER more than 4, NEVER a paraphrase), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array — include the anchor's line PLUS 1–2 adjacent lines for context, e.g. `[19, 20, 21]`). One unique ID per distinct fact.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
