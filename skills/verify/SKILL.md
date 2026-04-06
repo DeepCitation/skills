@@ -26,7 +26,7 @@ A claim cannot be its own evidence.
 `prepare` is the **only** way to read evidence — it has built-in PDF, OCR, and web readers.
 
 ```bash
-mkdir -p .deepcitation && npx -y deepcitation prepare <file-or-url> --summary > .deepcitation/summary-<name>.txt 2>&1
+mkdir -p .deepcitation && npx -y deepcitation@latest prepare <file-or-url> --text > .deepcitation/<name>.txt 2>&1
 ```
 
 Multiple sources: run all in parallel with `&` + `wait`.
@@ -34,12 +34,14 @@ Multiple sources: run all in parallel with `&` + `wait`.
 If the output contains "action needed", authenticate:
 
 ```bash
-npx -y deepcitation login --browser
+npx -y deepcitation@latest login --browser
 ```
 
 This opens the browser for OAuth and waits for the callback (up to 120s).
-If the user pastes a key instead, run `npx -y deepcitation login --key '<the-key>'`.
+If the user pastes a key instead, run `npx -y deepcitation@latest login --key '<the-key>'`.
 After login succeeds, **retry the same prepare command**.
+
+If the output contains "Update available", run `npm install -g deepcitation@latest`, then retry the command.
 
 **If authentication fails after attempting login, STOP COMPLETELY.**
 Show the error and end your response. Reports require verified evidence from `prepare`.
@@ -51,7 +53,7 @@ The summary contains `attachmentId` and `deepTextPages` (evidence text with
 `<page_number_N_index_I>` and `<line id="N">` tags). Reading it into context IS the
 mechanism — having evidence text in context (even repeated) improves citation accuracy via RE2.
 
-> **CLI version:** `deepTextPages` requires the latest CLI. If your summary shows `deepTextPromptPortion` instead, update before continuing: `npm update -g deepcitation` (or re-run with `npx -y deepcitation@latest`).
+> **CLI version:** `deepTextPages` requires the latest CLI. If your summary shows `deepTextPromptPortion` instead, run `npm install -g deepcitation@latest` and retry.
 
 ## 2. Respond with citations
 
@@ -124,8 +126,8 @@ Each sub-agent prompt must include:
 **After both agents complete, merge + verify in one command** (renumber, citation generation, and verification happen automatically). Replace `{draft}` and `{topic}` with actual names (e.g. `lease-terms-body` and `lease-terms`):
 
 ```bash
-npx -y deepcitation merge --a .deepcitation/section-a.md --b .deepcitation/section-b.md --out .deepcitation/{draft}-body.md && \
-npx -y deepcitation verify --markdown .deepcitation/{draft}-body.md \
+npx -y deepcitation@latest merge --a .deepcitation/section-a.md --b .deepcitation/section-b.md --out .deepcitation/{draft}-body.md && \
+npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
   --title "Descriptive Report Title" --out {topic}-verified.html
 ```
 
@@ -150,7 +152,7 @@ Structure with headings, tables, and lists matching the evidence. If evidence se
 Pick a clean output name matching the topic — the report lives in CWD, not `.deepcitation/`:
 
 ```bash
-npx -y deepcitation verify --markdown .deepcitation/{draft}.md \
+npx -y deepcitation@latest verify --markdown .deepcitation/{draft}.md \
   --title "Descriptive Report Title" \
   --out {topic}-verified.html
 ```
@@ -158,7 +160,7 @@ npx -y deepcitation verify --markdown .deepcitation/{draft}.md \
 If you skipped Step 1–2 because the HTML already had citation markers (triage row above), use `--html` instead:
 
 ```bash
-npx -y deepcitation verify --html {existing}.html \
+npx -y deepcitation@latest verify --html {existing}.html \
   --title "Descriptive Report Title" \
   --out {topic}-verified.html
 ```
@@ -188,10 +190,10 @@ If you suspect better evidence exists, add:
 ## Invariants
 
 - **Minimum tool calls** — do not make exploratory calls (ls, Glob, Grep, extra Read) between pipeline steps. Do not read files back after writing them. Single-topic pipeline: prepare → Read summary → Write body → Bash(verify+open). Multi-topic pipeline: prepare → Read summary → [Agent A ∥ Agent B] → Bash(merge+verify+open). Complete each step once.
-- **Never run login proactively** — only run `deepcitation login` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
+- **Never run login proactively** — only run `deepcitation auth` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
 - **Run verify ONCE** — do not edit the draft and re-verify.
 - **Write body text only** — the `verify` command auto-generates citation data from your `[display label](cite:N)` markers by searching the prepared summary.
-- **Only the CLI produces HTML** — the verified HTML is created exclusively by `npx deepcitation verify`. If you cannot run the CLI, stop and report the error.
+- **Only the CLI produces HTML** — the verified HTML is created exclusively by `npx -y deepcitation@latest verify`. If you cannot run the CLI, stop and report the error.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
 - **Citation density** — one citation per distinct claim; let the content and question drive the count. Avoid redundant citations for the same fact by reusing an existing `[label](cite:N)`.
 - Never expose API keys or render internal metadata as visible content
