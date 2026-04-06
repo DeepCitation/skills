@@ -116,7 +116,7 @@ Keys:
 <<<END_CITATION_DATA>>>
 ```
 
-Use the `attachmentId` from the summary JSON as the group key.
+Use the `attachmentId` from the prepare output as the group key.
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
@@ -124,11 +124,11 @@ Use the `attachmentId` from the summary JSON as the group key.
 
 **If the Agent tool is unavailable**, write both sections yourself in sequence.
 
-Spawn two agents simultaneously. Pass the full evidence text (copied verbatim from the summary) into each agent's prompt.
+Spawn two agents simultaneously. Pass the full evidence text (copied verbatim from the prepare output) into each agent's prompt.
 
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
-- The full `deepTextPages` evidence text from the summary (copy it in full)
+- The full `deepTextPages` evidence text from the prepare output (copy it in full)
 - Citation format: **bold** 1–4 verbatim words from the evidence — the exact source phrase. Place `[N]` after each bolded term. **`k` in CITATION_DATA must equal the bold text exactly** — they are the same verbatim phrase. The reader clicks the bold term and sees those same words highlighted. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (must equal bold text — 1–4 verbatim words, NEVER more than 4, NEVER a paraphrase), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array — include the anchor's line PLUS 1–2 adjacent lines for context, e.g. `[19, 20, 21]`). One unique ID per distinct fact.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
@@ -202,7 +202,7 @@ If you suspect better evidence exists, add:
 ## Invariants
 
 - **Minimum tool calls** — do not make exploratory calls (ls, Glob, Grep, extra Read) between pipeline steps. Do not read files back after writing them. Single-topic pipeline: prepare → Read summary → Write body → Bash(verify+open). Multi-topic pipeline: prepare → Read summary → [Agent A ∥ Agent B] → Bash(merge+verify+open). Complete each step once.
-- **Never run login proactively** — only run `deepcitation auth` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
+- **Never run login proactively** — only run `deepcitation login` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
 - **Run verify ONCE** — do not edit the draft and re-verify.
 - **Write body text only** — bold key terms with `[N]` markers and append a `<<<CITATION_DATA>>>` block with coordinates (`n`, `k`, `p`, `l`). Do not include structural boilerplate or HTML in the body file.
 - **Only the CLI produces HTML** — the verified HTML is created exclusively by `npx -y deepcitation@latest verify`. If you cannot run the CLI, stop and report the error.
