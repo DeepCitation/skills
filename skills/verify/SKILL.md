@@ -19,7 +19,7 @@ A claim cannot be its own evidence.
 | User provided a file/URL as evidence | That file/URL |
 | Prior chat already has claims to verify | Use existing claims as-is — do NOT rewrite them. Prepare evidence, then cite the existing text. |
 | Claims about public/official subjects, no evidence | Web-search for primary sources (legislation, official reports, studies) |
-| Existing verified HTML with `[anchor](cite:N)` citation markers | Skip to Step 3 with `verify --html` |
+| Existing verified HTML already produced by the CLI | Skip to Step 3 with `verify --html` |
 | You prepared the claims file as evidence | Web-search for primary sources and re-prepare |
 | Ambiguous (unclear which file is claims vs evidence) | Ask the user |
 
@@ -72,7 +72,7 @@ Example: The invoice totals **USD 4,350.00** [1] for services rendered by **Acme
 After the body text, append a `<<<CITATION_DATA>>>` block. Keys:
 
 - **n**: Citation id (integer, matches `[N]` in text)
-- **k**: 1–3 contiguous verbatim words from the evidence line at the referenced `l`. Max 4 words. Pick the distinctive noun or term, not the surrounding verb phrase. This gets highlighted in yellow — a short highlight is precise; a full sentence in yellow is unreadable.
+- **k**: 1–4 contiguous verbatim words from the evidence line at the referenced `l`. Pick the distinctive noun or term, not the surrounding verb phrase. This gets highlighted in yellow — a short highlight is precise; a full sentence in yellow is unreadable.
 - **p**: Compact page id `"N_I"` (from `<page_number_N_index_I>` tag)
 - **l**: Array of line IDs (from `<line id="N">` tags)
 
@@ -101,7 +101,7 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the summary (copy it in full)
-- Citation format: **bold** the 1–4 word name of each key fact — a claim, value, fact, entity, date, or price. Not the surrounding clause, just the core term. Bold text minimizes cognitive load: readers scan bolded terms to quickly grasp key facts. Place `[N]` after each bolded term. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (1–3 verbatim words from evidence — the distinctive noun/term, not the verb phrase — highlighted in yellow), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array from `<line id="N">`). One unique ID per distinct fact.
+- Citation format: **bold** the 1–4 word name of each key fact — a claim, value, fact, entity, date, or price. Not the surrounding clause, just the core term. Bold text minimizes cognitive load: readers scan bolded terms to quickly grasp key facts. Place `[N]` after each bolded term. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (1–4 verbatim words from evidence — the distinctive noun/term, not the verb phrase — highlighted in yellow), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array from `<line id="N">`). One unique ID per distinct fact.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
@@ -128,7 +128,7 @@ npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
 Structure with headings, tables, and lists matching the evidence. If evidence seems incomplete for the question, note what's covered and suggest the user share additional documents.
 
 **What goes in each file:**
-- **Body file** (your output or from agents): markdown prose with `[label](cite:N)` markers.
+- **Body file** (your output or from agents): markdown prose with `**bold term** [N]` markers and an appended `<<<CITATION_DATA>>>` block.
 - **Your response to the user**: The full markdown report body — prose only.
 
 ## 3. Verify
@@ -149,7 +149,7 @@ npx -y deepcitation@latest verify --html {existing}.html \
   --out {topic}-verified.html
 ```
 
-Run verify ONCE — do not edit the draft and re-verify. The API handles partial matches gracefully. If an anchor cannot be located in the evidence, the CLI flags it in output as unmatched — check the summary for typos or use Format 1 with a shorter verbatim term.
+Run verify ONCE — do not edit the draft and re-verify. The API handles partial matches gracefully. If an anchor cannot be located in the evidence, the CLI flags it in output as unmatched — check the summary for typos or shorten the `k` value to a more distinctive term.
 
 Do not use `verify --citations` directly — it is low-level and skips format normalization.
 
@@ -176,10 +176,10 @@ If you suspect better evidence exists, add:
 - **Minimum tool calls** — do not make exploratory calls (ls, Glob, Grep, extra Read) between pipeline steps. Do not read files back after writing them. Single-topic pipeline: prepare → Read summary → Write body → Bash(verify+open). Multi-topic pipeline: prepare → Read summary → [Agent A ∥ Agent B] → Bash(merge+verify+open). Complete each step once.
 - **Never run login proactively** — only run `deepcitation auth` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
 - **Run verify ONCE** — do not edit the draft and re-verify.
-- **Write body text only** — the `verify` command auto-generates citation data from your `[display label](cite:N)` markers by searching the prepared summary.
+- **Write body text only** — bold key terms with `[N]` markers and append a `<<<CITATION_DATA>>>` block with coordinates (`n`, `k`, `p`, `l`). Do not include structural boilerplate or HTML in the body file.
 - **Only the CLI produces HTML** — the verified HTML is created exclusively by `npx -y deepcitation@latest verify`. If you cannot run the CLI, stop and report the error.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
-- **Citation density** — one citation per distinct claim; let the content and question drive the count. Avoid redundant citations for the same fact by reusing an existing `[label](cite:N)`.
+- **Citation density** — one citation per distinct claim; let the content and question drive the count. Avoid redundant citations for the same fact by reusing an existing `[N]` reference — each `n` only needs one entry in the `<<<CITATION_DATA>>>` block.
 - Never expose API keys or render internal metadata as visible content
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
 
