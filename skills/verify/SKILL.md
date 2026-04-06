@@ -63,31 +63,32 @@ Use **standard markdown only** — no raw HTML tags.
 
 ### In-text markers
 
-Write naturally and **bold** the 1–4 word name of each key fact — a specific name, value, or right. Not the surrounding clause, just the core term. Bold text minimizes cognitive load for the reader: they scan the bolded terms to quickly grasp the key facts without reading every word. Then wrap each bolded term as a citation link: `[bolded term](cite:N)` where N is the sequential citation number (1, 2, 3…). One unique ID per distinct fact.
+Write naturally and **bold** the 1–4 word name of each key fact — a claim, value, fact, entity, date, or price. Not the surrounding clause, just the core term. Bold text minimizes cognitive load for the reader: they scan the bolded terms to quickly grasp the key facts without reading every word. Place a citation marker `[N]` immediately after each bolded term, where N is the sequential citation number (1, 2, 3…). One unique ID per distinct fact.
 
-Example: The invoice totals [USD 4,350.00](cite:1) for services rendered by [Acme Corp](cite:2) on [March 15, 2024](cite:3).
+Example: The invoice totals **USD 4,350.00** [1] for services rendered by **Acme Corp** [2] on **March 15, 2024** [3].
 
 ### Citation data block
 
-After the body text, append a `<<<CITATION_DATA>>>` block with coordinates for each citation. The CLI uses these to locate the exact evidence — no heuristic search.
+After the body text, append a `<<<CITATION_DATA>>>` block. Keys:
 
-`anchor_text` = the bolded term you cited. Must be verbatim from the evidence. The CLI automatically fills `full_phrase` (the surrounding sentence) from your `page_id` and `line_ids` coordinates.
-
-Read `page_id` from `<page_number_N_index_I>` tags and `line_ids` from `<line id="N">` tags in the summary.
+- **n**: Citation id (integer, matches `[N]` in text)
+- **k**: 1–3 contiguous verbatim words from the evidence line at the referenced `l`. Max 4 words. Pick the distinctive noun or term, not the surrounding verb phrase. This gets highlighted in yellow — a short highlight is precise; a full sentence in yellow is unreadable.
+- **p**: Compact page id `"N_I"` (from `<page_number_N_index_I>` tag)
+- **l**: Array of line IDs (from `<line id="N">` tags)
 
 ```
 <<<CITATION_DATA>>>
 {
   "ATTACHMENT_ID": [
-    {"id": 1, "anchor_text": "USD 4,350.00", "page_id": "page_number_1_index_0", "line_ids": [14]},
-    {"id": 2, "anchor_text": "Acme Corp", "page_id": "page_number_1_index_0", "line_ids": [3]},
-    {"id": 3, "anchor_text": "March 15, 2024", "page_id": "page_number_1_index_0", "line_ids": [5]}
+    {"n": 1, "k": "USD 4,350.00", "p": "1_0", "l": [14]},
+    {"n": 2, "k": "Acme Corp", "p": "1_0", "l": [3]},
+    {"n": 3, "k": "March 15, 2024", "p": "1_0", "l": [5]}
   ]
 }
 <<<END_CITATION_DATA>>>
 ```
 
-Use the `attachmentId` from the summary JSON as the group key. Each entry needs `id`, `anchor_text`, `page_id`, and `line_ids`.
+Use the `attachmentId` from the summary JSON as the group key.
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
@@ -100,7 +101,7 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the summary (copy it in full)
-- Citation format: **bold** key figures, values, names, and entities from the evidence — not labels, just the terms. Then wrap each bolded term as `[bolded term](cite:N)`. After the body, append a `<<<CITATION_DATA>>>` block with `id`, `anchor_text` (= the bolded term, verbatim from evidence), `page_id` (from `<page_number_N_index_I>` tags), and `line_ids` (from `<line id="N">` tags). The CLI fills `full_phrase` automatically. One unique ID per distinct fact.
+- Citation format: **bold** the 1–4 word name of each key fact — a claim, value, fact, entity, date, or price. Not the surrounding clause, just the core term. Bold text minimizes cognitive load: readers scan bolded terms to quickly grasp key facts. Place `[N]` after each bolded term. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (1–3 verbatim words from evidence — the distinctive noun/term, not the verb phrase — highlighted in yellow), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array from `<line id="N">`). One unique ID per distinct fact.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
