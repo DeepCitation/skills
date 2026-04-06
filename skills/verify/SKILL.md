@@ -136,7 +136,7 @@ Structure with headings, tables, and lists matching the evidence. If evidence se
 Pick a clean output name matching the topic — the report lives in CWD, not `.deepcitation/`:
 
 ```bash
-npx -y deepcitation@latest verify --markdown .deepcitation/{draft}.md \
+npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
   --title "Descriptive Report Title" \
   --out {topic}-verified.html
 ```
