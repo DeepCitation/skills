@@ -104,6 +104,11 @@ The reader experiences citations in three layers — each adds detail:
 2. **Brevity**: bold text and `k` must be **≤4 words**. This is a HARD LIMIT, not a suggestion. When the evidence phrase is longer, truncate to the 2–3 most distinctive words — see examples below.
 3. **Context**: `l` must include the anchor's line PLUS 1–2 adjacent lines, so the evidence paragraph is longer than the anchor. This makes the highlight visible within surrounding text.
 
+**Per-citation SELF-CHECK — run this in your head before writing each bold term:**
+1. **Count the words.** Say them: "one, two, three, four." If you hit 5, stop — drop a word.
+2. **Drop the leading quantifier or filler adjective.** "six ground floor commercial units" (5w) → drop "six" → **ground floor commercial** (3w). "fifty-nine interior underground parking units" (5w) → drop "fifty-nine interior" → **underground parking units** (3w). Numbers and size modifiers are almost never the distinctive part — the noun phrase is.
+3. **Ask: could a reader ctrl+F this and find it uniquely?** If yes and it's ≤4 words, proceed. If it takes 5+ words to be unique, you're probably grabbing too much context — pick the noun head, not the whole phrase.
+
 ### In-text markers
 
 **Bold** 1–4 verbatim words from the evidence. The bold text must appear verbatim in the source — but you pick only the shortest distinctive substring (≤4 words), not the full phrase. Place `[N]` immediately after. One unique ID per distinct fact.
