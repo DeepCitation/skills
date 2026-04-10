@@ -124,12 +124,21 @@ Example: The invoice totals **USD 4,350.00** [1] for services rendered by **Acme
 
 **How to truncate long evidence phrases to ≤4 words** (canonical strategy is in `docs/agents/deep-citation-standards.md` §2). A few worked examples for in-flow reference:
 
+*Quantifier-drop (noun phrases):*
 - "Junior to payment of outstanding indebtedness and creditor claims" → **outstanding indebtedness** (2w)
 - "lower limit is the upper unfinished surface of the concrete ground floor slab" → **unfinished surface** (2w) or **concrete floor slab** (3w)
 - "Each parking unit shall be used and occupied only for motor vehicle parking purposes" → **motor vehicle parking** (3w)
 - "no motor vehicle which contains a propane or natural gas propulsion system shall be parked" → **natural gas propulsion** (3w)
 
-Pick the 2–3 words that a reader would recognize as the key term — the noun/concept, not the full clause.
+*Clause-truncation (mechanism and priority text — cite the key verb or tier marker, NOT the full clause):*
+- "will automatically convert into the number of shares of Safe Preferred Stock" → **automatically convert** (2w) [cite the trigger verb]
+- "Investor will automatically be entitled to receive a portion of Proceeds" → **entitled to receive** (3w) [drop subject and object]
+- "On par with payments for other Safes and/or Preferred Stock" → **On par with** (3w) [tier marker is the claim; the list of co-equal holders is context]
+- "Senior to payments for Common Stock" → **Senior to** (2w) [same: the priority label is the claim]
+- "the applicable Proceeds will be distributed pro rata to the Investor" → **pro rata** (2w) [the distribution principle, not the full rule]
+- "immediately following the earliest to occur of: (i) the issuance of Capital Stock" → **earliest to occur** (3w) or **Capital Stock** (2w)
+
+Pick the 2–3 words that a reader would recognize as the key term — the noun, the distinctive verb trigger, or the priority tier label. For mechanism clauses, the verb phrase (≤2 words) is usually the correct anchor, not the full operative sentence.
 
 **Avoid heading-only anchors.** If the same short phrase appears as a section heading and again inside the operative sentence, do **not** anchor the heading version — it will verify against the wrong place while still looking superficially correct.
 - BAD: "The declaration creates exterior parking units and underground parking units." → **exterior parking units** when the evidence also contains the heading `EXTERIOR PARKING UNITS`
@@ -186,7 +195,7 @@ Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the prepare output (copy it in full)
 - Citation format: **bold** 1–4 verbatim words from the evidence — the exact source phrase. Place `[N]` after each bolded term. **`k` in CITATION_DATA must equal the bold text exactly** — they are the same verbatim phrase. The reader clicks the bold term and sees those same words highlighted. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (must equal bold text — 1–4 verbatim words, NEVER more than 4, NEVER a paraphrase), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array — include the anchor's line PLUS 1–2 adjacent lines for context, e.g. `[19, 20, 21]`). One unique ID per distinct fact. **Do NOT wrap the JSON in a markdown code fence** (no ```` ```json ```` ... ```` ``` ````). The `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes — a fence confuses the repair heuristic and produces a silent empty parse that breaks merge.
-- **Word-count gate (HARD)**: before writing each `**bold term**`, count: "1 – 2 – 3 – 4 – stop." After writing, count again. If either count reaches 5 or more, rewrite to ≤4 words immediately — drop the leading quantifier/adjective, keep the noun head. Do not advance to the next claim until the current bold term is ≤4 words.
+- **Word-count gate (HARD)**: before writing each `**bold term**`, count: "1 – 2 – 3 – 4 – stop." After writing, count again. If either count reaches 5 or more, rewrite to ≤4 words immediately — drop the leading quantifier/adjective, keep the noun head or key verb. Do not advance to the next claim until the current bold term is ≤4 words. For mechanism clauses (X converts, Y is entitled to, Z distributes), cite the key verb phrase (≤2 words) — NOT the full clause. Examples: "will automatically convert into shares" → **automatically convert**; "On par with payments for other Safes" → **On par with**; "Senior to payments for Common Stock" → **Senior to**.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
