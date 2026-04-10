@@ -87,6 +87,11 @@ mechanism — having evidence text in context (even repeated) improves citation 
 
 ## 2. Respond with citations
 
+> **Citation rules reference**: All anchor text, display label, and citation data field rules are defined in
+> `docs/agents/deep-citation-standards.md` (§1–§4 and §9 UX contract). This skill owns the *authoring
+> heuristics* — how to pick the right anchor in-flow — and references the standards for the hard rules.
+> When the two disagree, the standards doc wins.
+
 Your response IS the verification report. Write body text with citation markers, then append a `<<<CITATION_DATA>>>` JSON block with coordinates.
 
 Use **standard markdown only** — no raw HTML tags.
@@ -99,15 +104,17 @@ The reader experiences citations in three layers — each adds detail:
 2. **Highlight** — they click the bold term and see THOSE SAME WORDS highlighted in yellow in the evidence popover. The popover shows the full evidence paragraph (from `l` line IDs) with the anchor (`k`) highlighted in amber within it. If `k` = the entire paragraph, **no highlight is shown** — the anchor drowns in its own context.
 3. **Explore** — the keyhole strip shows the anchor region in the original PDF image at readable size. Short anchors (1–4 words) stay crisp; very long anchors spread across the image and may lose readability.
 
-**Hard rules** (all three must be satisfied — no trade-offs):
-1. **Connection**: bold text and `k` must be identical (Format 1). The reader clicks the bold term and sees those exact words highlighted.
-2. **Brevity**: bold text and `k` must be **≤4 words**. This is a HARD LIMIT, not a suggestion. When the evidence phrase is longer, truncate to the 2–3 most distinctive words — see examples below.
-3. **Context**: `l` must include the anchor's line PLUS 1–2 adjacent lines, so the evidence paragraph is longer than the anchor. This makes the highlight visible within surrounding text.
+**Hard rules** (see `docs/agents/deep-citation-standards.md` §1 for the canonical list):
+1. **Connection**: bold text and `k` must be identical. The reader clicks the bold term and sees those exact words highlighted.
+2. **Brevity**: bold text and `k` must be **≤4 words, ≤40 chars** — HARD LIMIT. Truncate longer evidence phrases per §2 of the standards doc.
+3. **Context**: `l` must include the anchor's line PLUS 1–2 adjacent lines, so the evidence paragraph is longer than the anchor.
+4. **Verbatim**: `k` must be a contiguous substring of the evidence — never a paraphrase, never with ellipsis.
 
-**Per-citation SELF-CHECK — run this in your head before writing each bold term:**
-1. **Count the words.** Say them: "one, two, three, four." If you hit 5, stop — drop a word.
+**Per-citation SELF-CHECK — run this in your head before AND after writing each bold term:**
+1. **Before writing**: decide the anchor phrase first. Count the words silently: "1 – 2 – 3 – 4". If you reach 5, stop — do NOT type the `**`. Drop the leading quantifier or filler adjective and recount.
 2. **Drop the leading quantifier or filler adjective.** "six ground floor commercial units" (5w) → drop "six" → **ground floor commercial** (3w). "fifty-nine interior underground parking units" (5w) → drop "fifty-nine interior" → **underground parking units** (3w). Numbers and size modifiers are almost never the distinctive part — the noun phrase is.
-3. **Ask: could a reader ctrl+F this and find it uniquely?** If yes and it's ≤4 words, proceed. If it takes 5+ words to be unique, you're probably grabbing too much context — pick the noun head, not the whole phrase.
+3. **After writing** `**bold term**`: count the words again. If the count is 5 or more, **stop immediately**, delete the bold term, and rewrite with ≤4 words before moving to the next sentence. Do not continue until this citation passes.
+4. **Ask: could a reader ctrl+F this and find it uniquely?** If yes and it's ≤4 words, proceed. If it takes 5+ words to be unique, you're probably grabbing too much context — pick the noun head, not the whole phrase.
 
 ### In-text markers
 
@@ -115,40 +122,34 @@ The reader experiences citations in three layers — each adds detail:
 
 Example: The invoice totals **USD 4,350.00** [1] for services rendered by **Acme Corp** [2] on **March 15, 2024** [3].
 
-**How to truncate long evidence phrases to ≤4 words:**
-- "Junior to payment of outstanding indebtedness and creditor claims" → pick **Junior to payment** (3w) or **outstanding indebtedness** (2w) — the distinctive core
-- "immediately following the earliest to occur of" → pick **earliest to occur** (3w)
-- "without relieving the Company of any obligations arising from a prior breach" → pick **prior breach** (2w)
-- "due and payable to the Investor immediately prior to the consummation" → pick **due and payable** (3w)
-- "general assignment for the benefit of the Company's creditors" → pick **general assignment** (2w)
-- "lower limit is the upper unfinished surface of the concrete ground floor slab" → pick **unfinished surface** (2w) or **concrete floor slab** (3w)
-- "upper limit is the lower unfinished surface of the concrete slab above the Unit" → pick **slab above** (2w) or **unfinished surface** (2w)
-- "backside surfaces of the drywall on the exterior walls of each unit" → pick **backside surfaces** (2w) or **exterior walls** (2w)
-- "Owners and tenants of commercial units are responsible to ensure that they review the parking requirements" → pick **parking requirements** (2w)
-- "the exclusive use of the interior east-west corridor and stairwell immediately north of the commercial units" → pick **east-west corridor** (3w) or **exclusive use** (2w)
-- "Each parking unit shall be used and occupied only for motor vehicle parking purposes" → pick **motor vehicle parking** (3w) or **parking purposes** (2w)
-- "no motor vehicle which contains a propane or natural gas propulsion system shall be parked" → pick **propane or natural gas** (4w) or **natural gas propulsion** (3w)
+**How to truncate long evidence phrases to ≤4 words** (canonical strategy is in `docs/agents/deep-citation-standards.md` §2). A few worked examples for in-flow reference:
 
-Pick the 2-3 words that a reader would recognize as the key term — the noun/concept, not the full clause.
+- "Junior to payment of outstanding indebtedness and creditor claims" → **outstanding indebtedness** (2w)
+- "lower limit is the upper unfinished surface of the concrete ground floor slab" → **unfinished surface** (2w) or **concrete floor slab** (3w)
+- "Each parking unit shall be used and occupied only for motor vehicle parking purposes" → **motor vehicle parking** (3w)
+- "no motor vehicle which contains a propane or natural gas propulsion system shall be parked" → **natural gas propulsion** (3w)
+
+Pick the 2–3 words that a reader would recognize as the key term — the noun/concept, not the full clause.
+
+**Avoid heading-only anchors.** If the same short phrase appears as a section heading and again inside the operative sentence, do **not** anchor the heading version — it will verify against the wrong place while still looking superficially correct.
+- BAD: "The declaration creates exterior parking units and underground parking units." → **exterior parking units** when the evidence also contains the heading `EXTERIOR PARKING UNITS`
+- GOOD: split the claim and anchor the operative clause instead: **underground parking units** or **fifty-nine (59) interior**
+- BAD: "Unit 59 must be cleared for hydro vault access." → **hydro vault** when the evidence also contains the heading `Rights of Access to the Hydro Vault`
+- GOOD: anchor the action phrase from the rule itself: **remove any vehicle** or **permit access**
+
+**Prefer operative phrases over category labels.** A short noun phrase is only valid if it points at the sentence that proves the claim. If the noun phrase is just a topic label, choose the verb phrase or distinctive action instead.
+- BAD: claim about restrictions → **commercial units** (category only)
+- GOOD: **parking requirements** or **no right of access** (operative rule)
+- BAD: claim about pet removal timing → **ordinary household pets** (topic only)
+- GOOD: **two (2) weeks** or **on a leash** (the actual restriction being proved)
 
 ### Citation data block
 
-After the body text, append a `<<<CITATION_DATA>>>` block. **`k` must equal the bold text exactly** — they are the same 1–4 verbatim words from the evidence. NEVER more than 4 words in either bold or `k`.
+After the body text, append a `<<<CITATION_DATA>>>` block. Field definitions (`n`, `k`, `p`, `l`) are in `docs/agents/deep-citation-standards.md` §4. Two critical reminders:
 
-Keys:
-
-- **n**: Citation id (integer, matches `[N]` in text)
-- **k**: Must equal the bold text in the body exactly — 1–4 verbatim words. NEVER more than 4.
-  - BAD: bold = `"Junior to payment of outstanding indebtedness"` (6 words) — too long
-  - GOOD: bold = `"outstanding indebtedness"` and k = `"outstanding indebtedness"` (identical, 2w, verbatim) ✓
-  - BAD: bold = `"Equity Financing"` but k = `"when the company raises capital"` (bold ≠ k, different words)
-  - GOOD: bold = `"Equity Financing"` and k = `"Equity Financing"` (identical) ✓
-  - BAD: bold = `"lower limit is the upper unfinished surface of the concrete ground floor slab"` (13 words) — full clause, far too long
-  - GOOD: bold = `"unfinished surface"` and k = `"unfinished surface"` (2w, verbatim, picks the distinctive noun) ✓
-  - BAD: bold = `"shall be used and occupied only for motor vehicle parking purposes"` (11 words) — full clause
-  - GOOD: bold = `"motor vehicle parking"` and k = `"motor vehicle parking"` (3w, verbatim) ✓
-- **p**: Compact page id `"N_I"` (from `<page_number_N_index_I>` tag)
-- **l**: Array of line IDs (from `<line id="N">` tags). **Include the anchor's line PLUS 1–2 adjacent lines** so the evidence paragraph has context around the highlight. If the anchor is on line 20, use `[19, 20, 21]` or at minimum `[19, 20]`. A single-line `l` risks the anchor filling the entire paragraph — which renders with **no visible highlight**.
+- **`k` must equal the bold text exactly** — they are the same 1–4 verbatim words from the evidence.
+- **`p` format is `"pageNumber_arrayIndex"`** — e.g. `"1_0"` (page 1, index 0). Use the `<page_number_N_index_I>` tag values from the prepare output.
+- **`l` must include the anchor's line plus 1–2 adjacent lines** (e.g. `[19, 20, 21]`) so the evidence paragraph gives the highlight visible context.
 
 ```
 <<<CITATION_DATA>>>
@@ -164,6 +165,15 @@ Keys:
 
 Use the `attachmentId` from the prepare output as the group key.
 
+**Four failure modes** — each row shows the trap, the fix, and the lesson. The trap is what the model naturally writes under pressure; the fix is what passes Test 4.
+
+| Trap (✗) | Fix (✓) | Why |
+|---|---|---|
+| bold = `**Junior to payment of outstanding indebtedness**` (6w) | bold = `**outstanding indebtedness**` (2w) | The distinctive noun carries the claim — quantifiers and prepositions are filler. Count words; 5+ is always wrong. |
+| bold = `**Equity Financing**`, k = `"when the company raises capital"` | bold = `**Equity Financing**`, k = `"Equity Financing"` | Bold and `k` must be the **same characters**, not synonyms. The reader clicks the bold term expecting to see *those exact words* highlighted in the popover. |
+| bold = `**Tooth Numbers 3 9 14 19 24 30**` (7w) | bold = `**Tooth Numbers**` (2w) | Multi-value fields: cite **one** anchor, not the whole row. The list is the claim context; the header is the citable term. |
+| bold = `**earliest to occur...prior to**` (4w with ellipsis) | bold = `**earliest to occur**` (3w) | Never use `...` in an anchor. `k` must be a contiguous substring — if you need two pieces, they are two citations, not one. |
+
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
 **When to use:** The question asks about 2 or more distinct topics. If the expected output has two or more top-level section headings, use parallel agents. **You MUST use the parallel path when the Agent tool is available.**
@@ -176,6 +186,7 @@ Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the prepare output (copy it in full)
 - Citation format: **bold** 1–4 verbatim words from the evidence — the exact source phrase. Place `[N]` after each bolded term. **`k` in CITATION_DATA must equal the bold text exactly** — they are the same verbatim phrase. The reader clicks the bold term and sees those same words highlighted. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (must equal bold text — 1–4 verbatim words, NEVER more than 4, NEVER a paraphrase), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array — include the anchor's line PLUS 1–2 adjacent lines for context, e.g. `[19, 20, 21]`). One unique ID per distinct fact. **Do NOT wrap the JSON in a markdown code fence** (no ```` ```json ```` ... ```` ``` ````). The `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes — a fence confuses the repair heuristic and produces a silent empty parse that breaks merge.
+- **Word-count gate (HARD)**: before writing each `**bold term**`, count: "1 – 2 – 3 – 4 – stop." After writing, count again. If either count reaches 5 or more, rewrite to ≤4 words immediately — drop the leading quantifier/adjective, keep the noun head. Do not advance to the next claim until the current bold term is ≤4 words.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
