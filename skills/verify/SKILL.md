@@ -145,7 +145,7 @@ Pick the 2–3 words that a reader would recognize as the key term — the noun,
 - "you can generally deduct only 50% of any otherwise deductible business-related meal expenses" → **50%** (1w) [cite the percentage limit]
 - "58.5 cents per mile from January 1, 2022, through June 30, 2022" → **58.5 cents per mile** (4w) [cite the rate, drop the effective-date clause]
 - "Received more than $130,000 in pay for the preceding year" → **$130,000 in pay** (3w) [cite the threshold and its unit]
-- "$450- if that person is age 40 or younger" → **$450** (1w) [cite the dollar cap, let prose carry the age bracket]
+- "$450- if that person is age 40 or younger" → **$450** (1w) [cite the dollar cap, strip trailing punctuation artifacts like the dash; let prose carry the age bracket]
 - "average annual gross receipts are $27 million or less for the 3 prior tax years" → **$27 million or less** (4w) [cite the receipts threshold]
 - "the character and amount of responsibility" → **responsibility** (1w) [cite the factor, not the list preamble]
 - "100% business meal deduction for food or beverages provided by a restaurant" → **100%** (1w) [cite the deduction rate]
@@ -201,9 +201,9 @@ Use the `attachmentId` from the prepare output as the group key.
 | bold = `**Equity Financing**`, k = `"when the company raises capital"` | bold = `**Equity Financing**`, k = `"Equity Financing"` | Bold and `k` must be the **same characters**, not synonyms. The reader clicks the bold term expecting to see *those exact words* highlighted in the popover. |
 | bold = `**Tooth Numbers 3 9 14 19 24 30**` (7w) | bold = `**Tooth Numbers**` (2w) | Multi-value fields: cite **one** anchor, not the whole row. The list is the claim context; the header is the citable term. |
 | bold = `**earliest to occur...prior to**` (4w with ellipsis) | bold = `**earliest to occur**` (3w) | Never use `...` in an anchor. `k` must be a contiguous substring — if you need two pieces, they are two citations, not one. |
-| bold = `**first 5 years of employment**` (5w) | bold = `**5 years**` (2w) | Tax/regulatory clauses: cite the threshold or limit, drop the qualifying prepositional phrase. "first" and "of employment" are prose context. |
-| bold = `**30% of the adjustable taxable income**` (6w) | bold = `**adjustable taxable income**` (3w) | Same pattern: cite the distinctive noun phrase, not the full clause with its leading percentage. The "30%" belongs in prose: `capped at 30% of **adjustable taxable income** [5]`. |
-| bold = `**limited by the person's age**` (5w) | bold = `**person's age**` (2w) | Participial filler ("limited by the") is prose, not anchor. The noun head is the citable term. |
+| bold = `**first 5 years of employment**` (5w) | bold = `**5 years**` (2w) | Tax/regulatory clauses: cite the threshold or limit, drop the qualifying prepositional phrase. "first" and "of employment" are prose context. Prose: `within the first **5 years** [3] of employment`. |
+| bold = `**30% of the adjustable taxable income**` (6w) | bold = `**adjustable taxable income**` (3w) | Same pattern: cite the distinctive noun phrase, not the full clause with its leading percentage. Prose: `capped at 30% of **adjustable taxable income** [5]`. |
+| bold = `**limited by the person's age**` (5w) | bold = `**person's age**` (2w) | Participial filler ("limited by the") is prose, not anchor. The noun head is the citable term. Prose: `the deduction is limited by the **person's age** [7]`. |
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
