@@ -161,6 +161,10 @@ For tax/regulatory text: dollar amounts, percentages, and named legal tests are 
 - BAD: "Unit 59 must be cleared for hydro vault access." → **hydro vault** when the evidence also contains the heading `Rights of Access to the Hydro Vault`
 - GOOD: anchor the action phrase from the rule itself: **remove any vehicle** or **permit access**
 
+**Never cite from index, appendix, or table-of-contents pages.** If a dollar amount, form number, or term appears in both the body text and an A-Z index or appendix, always point `p` and `l` at the **body text** page where the operative rule or definition lives. Index entries are page-number references, not evidence — they produce garbage sourceContext and fail verification.
+- BAD: `"$297"` with `p` pointing to the A-Z index page → sourceContext = "A Club dues 47 F Carrying charge 25..."
+- GOOD: `"$297"` with `p` pointing to the per-diem rate table in Chapter 11 → sourceContext = "the per diem rate for high-cost locations will increase to $297..."
+
 **Prefer operative phrases over category labels.** A short noun phrase is only valid if it points at the sentence that proves the claim. If the noun phrase is just a topic label, choose the verb phrase or distinctive action instead.
 - BAD: claim about restrictions → **commercial units** (category only)
 - GOOD: **parking requirements** or **no right of access** (operative rule)
