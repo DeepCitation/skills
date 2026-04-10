@@ -140,6 +140,21 @@ Example: The invoice totals **USD 4,350.00** [1] for services rendered by **Acme
 
 Pick the 2–3 words that a reader would recognize as the key term — the noun, the distinctive verb trigger, or the priority tier label. For mechanism clauses, the verb phrase (≤2 words) is usually the correct anchor, not the full operative sentence.
 
+*Tax/regulatory value extraction (cite the number or threshold, NOT the surrounding rule):*
+- "ordinary and necessary expenses incurred while carrying on your trade or business" → **ordinary and necessary** (3w) [the legal test name, not the full definition]
+- "you can generally deduct only 50% of any otherwise deductible business-related meal expenses" → **50%** (1w) [cite the percentage limit]
+- "58.5 cents per mile from January 1, 2022, through June 30, 2022" → **58.5 cents per mile** (4w) [cite the rate, drop the effective-date clause]
+- "Received more than $130,000 in pay for the preceding year" → **$130,000 in pay** (3w) [cite the threshold and its unit]
+- "$450- if that person is age 40 or younger" → **$450** (1w) [cite the dollar cap, let prose carry the age bracket]
+- "average annual gross receipts are $27 million or less for the 3 prior tax years" → **$27 million or less** (4w) [cite the receipts threshold]
+- "the character and amount of responsibility" → **responsibility** (1w) [cite the factor, not the list preamble]
+- "100% business meal deduction for food or beverages provided by a restaurant" → **100%** (1w) [cite the deduction rate]
+
+For tax/regulatory text: dollar amounts, percentages, and named legal tests are the anchors. The qualifying clause ("for the preceding year", "incurred while carrying on") is prose context — it belongs outside the bold marker. Common trap: grabbing the full regulatory condition instead of the distinctive noun head:
+- BAD: `**first 5 years of employment**` (5w) → GOOD: `**5 years**` (2w)
+- BAD: `**30% of the adjustable taxable income**` (6w) → GOOD: `**adjustable taxable income**` (3w)
+- BAD: `**limited by the person's age**` (5w) → GOOD: `**person's age**` (2w)
+
 **Avoid heading-only anchors.** If the same short phrase appears as a section heading and again inside the operative sentence, do **not** anchor the heading version — it will verify against the wrong place while still looking superficially correct.
 - BAD: "The declaration creates exterior parking units and underground parking units." → **exterior parking units** when the evidence also contains the heading `EXTERIOR PARKING UNITS`
 - GOOD: split the claim and anchor the operative clause instead: **underground parking units** or **fifty-nine (59) interior**
@@ -182,6 +197,9 @@ Use the `attachmentId` from the prepare output as the group key.
 | bold = `**Equity Financing**`, k = `"when the company raises capital"` | bold = `**Equity Financing**`, k = `"Equity Financing"` | Bold and `k` must be the **same characters**, not synonyms. The reader clicks the bold term expecting to see *those exact words* highlighted in the popover. |
 | bold = `**Tooth Numbers 3 9 14 19 24 30**` (7w) | bold = `**Tooth Numbers**` (2w) | Multi-value fields: cite **one** anchor, not the whole row. The list is the claim context; the header is the citable term. |
 | bold = `**earliest to occur...prior to**` (4w with ellipsis) | bold = `**earliest to occur**` (3w) | Never use `...` in an anchor. `k` must be a contiguous substring — if you need two pieces, they are two citations, not one. |
+| bold = `**first 5 years of employment**` (5w) | bold = `**5 years**` (2w) | Tax/regulatory clauses: cite the threshold or limit, drop the qualifying prepositional phrase. "first" and "of employment" are prose context. |
+| bold = `**30% of the adjustable taxable income**` (6w) | bold = `**adjustable taxable income**` (3w) | Same pattern: cite the distinctive noun phrase, not the full clause with its leading percentage. The "30%" belongs in prose: `capped at 30% of **adjustable taxable income** [5]`. |
+| bold = `**limited by the person's age**` (5w) | bold = `**person's age**` (2w) | Participial filler ("limited by the") is prose, not anchor. The noun head is the citable term. |
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
@@ -195,7 +213,7 @@ Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the prepare output (copy it in full)
 - Citation format: **bold** 1–4 verbatim words from the evidence — the exact source phrase. Place `[N]` after each bolded term. **`k` in CITATION_DATA must equal the bold text exactly** — they are the same verbatim phrase. The reader clicks the bold term and sees those same words highlighted. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (must equal bold text — 1–4 verbatim words, NEVER more than 4, NEVER a paraphrase), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array — include the anchor's line PLUS 1–2 adjacent lines for context, e.g. `[19, 20, 21]`). One unique ID per distinct fact. **Do NOT wrap the JSON in a markdown code fence** (no ```` ```json ```` ... ```` ``` ````). The `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes — a fence confuses the repair heuristic and produces a silent empty parse that breaks merge.
-- **Word-count gate (HARD)**: before writing each `**bold term**`, count: "1 – 2 – 3 – 4 – stop." After writing, count again. If either count reaches 5 or more, rewrite to ≤4 words immediately — drop the leading quantifier/adjective, keep the noun head or key verb. Do not advance to the next claim until the current bold term is ≤4 words. For mechanism clauses (X converts, Y is entitled to, Z distributes), cite the key verb phrase (≤2 words) — NOT the full clause. Examples: "will automatically convert into shares" → **automatically convert**; "On par with payments for other Safes" → **On par with**; "Senior to payments for Common Stock" → **Senior to**.
+- **Word-count gate (HARD)**: before writing each `**bold term**`, count: "1 – 2 – 3 – 4 – stop." After writing, count again. If either count reaches 5 or more, rewrite to ≤4 words immediately — drop the leading quantifier/adjective, keep the noun head or key verb. Do not advance to the next claim until the current bold term is ≤4 words. For mechanism clauses (X converts, Y is entitled to, Z distributes), cite the key verb phrase (≤2 words) — NOT the full clause. Examples: "will automatically convert into shares" → **automatically convert**; "On par with payments for other Safes" → **On par with**; "Senior to payments for Common Stock" → **Senior to**; "ordinary and necessary expenses incurred while carrying on your trade" → **ordinary and necessary**; "$450- if that person is age 40 or younger" → **$450**.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
