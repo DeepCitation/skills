@@ -88,7 +88,7 @@ mechanism — having evidence text in context (even repeated) improves citation 
 ## 2. Respond with citations
 
 > **Citation rules reference**: All anchor text, display label, and citation data field rules are defined in
-> `docs/deep-citation-standards.md` (§1–§4 and §9 UX contract). This skill owns the *authoring
+> `packages/deepcitation/docs/agents/deep-citation-standards.md` (§1–§4 and §9 UX contract). This skill owns the *authoring
 > heuristics* — how to pick the right anchor in-flow — and references the standards for the hard rules.
 > When the two disagree, the standards doc wins.
 
@@ -109,7 +109,7 @@ Users scan, they don't read (see `docs/agents/concepts.md`). Each view state has
 - **Lighter**: A terse `claimText` reads naturally in prose — the bold term is a scan anchor, not a quote
 - **More flexible**: When `claimText` is terse, existing prose doesn't need to be rewritten around it
 
-**Hard rules** (see `docs/deep-citation-standards.md` §1 for the canonical list):
+**Hard rules** (see `packages/deepcitation/docs/agents/deep-citation-standards.md` §1 for the canonical list):
 1. **Connection**: In Format 1, `claimText` (bold text) and `k` (`sourceMatch`) are identical. In Format 2, `claimText` is a short prose label and `k` is the verbatim source term — both must be terse, but they serve different roles.
 2. **Brevity**: `sourceMatch` (`k`) must be **≤4 words, ≤40 chars**. Truncate longer evidence phrases per §2 of the standards doc.
 3. **Context**: `l` must include the `sourceMatch` line PLUS 1–2 adjacent lines, so `sourceContext` is longer than `sourceMatch`.
@@ -141,7 +141,7 @@ Example: The company's [revenue grew](cite:1 '$4.2 million') over the prior year
 
 **Default to the tersest `sourceMatch` that uniquely identifies the evidence.** Then decide whether that same phrase works as `claimText` (Format 1) or whether the prose needs its own phrasing (Format 2). One unique ID per distinct fact.
 
-**How to truncate long `sourceContext` phrases to a terse `sourceMatch`** (canonical strategy is in `docs/deep-citation-standards.md` §2). A few worked examples for in-flow reference:
+**How to truncate long `sourceContext` phrases to a terse `sourceMatch`** (canonical strategy is in `packages/deepcitation/docs/agents/deep-citation-standards.md` §2). A few worked examples for in-flow reference:
 
 *Quantifier-drop (noun phrases):*
 - "Junior to payment of outstanding indebtedness and creditor claims" → **outstanding indebtedness** (2w)
@@ -202,7 +202,7 @@ For tax/regulatory text: dollar amounts, percentages, and named legal tests are 
 
 ### Citation data block
 
-After the body text, append a `<<<CITATION_DATA>>>` block. Field definitions are in `docs/deep-citation-standards.md` §4. Critical reminders:
+After the body text, append a `<<<CITATION_DATA>>>` block. Field definitions are in `packages/deepcitation/docs/agents/deep-citation-standards.md` §4. Critical reminders:
 
 - **`k` / `anchorText`** (Domain B) — the verbatim short anchor from the source. ≤4 words, ≤40 chars. In Format 1, `k` equals the bold `claimText`. In Format 2, `k` is the verbatim source term.
 - **`f` / `fullPhrase`** — copy 1–2 verbatim sentences from the source that contain the anchor. Must be significantly longer than `k` — it provides the highlight context. Use proper JSON escaping for quotes.

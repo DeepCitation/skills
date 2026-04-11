@@ -1,0 +1,2438 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepCitation /verify — Pipeline Reference</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f7f7f5;
+    --bg-tertiary: #efefed;
+    --border: #e3e3e0;
+    --border-subtle: #f0f0ee;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b6b6b;
+    --text-tertiary: #9b9b9b;
+    --accent: #6c6af6;
+    --accent-bg: #f0efff;
+    --accent-border: #c5c3ff;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --green-border: #bbf7d0;
+    --yellow: #b45309;
+    --yellow-bg: #fffbeb;
+    --yellow-border: #fed7aa;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --red-border: #fecaca;
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --blue-border: #bfdbfe;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  }
+
+  [data-theme="dark"] {
+    --bg: #111110;
+    --bg-secondary: #1a1a18;
+    --bg-tertiary: #232320;
+    --border: #2e2e2b;
+    --border-subtle: #252522;
+    --text-primary: #e8e8e3;
+    --text-secondary: #9b9b96;
+    --text-tertiary: #606060;
+    --accent: #8b8af8;
+    --accent-bg: #1a1936;
+    --accent-border: #3d3b8a;
+    --green: #4ade80;
+    --green-bg: #052e16;
+    --green-border: #166534;
+    --yellow: #fbbf24;
+    --yellow-bg: #1c1506;
+    --yellow-border: #78350f;
+    --red: #f87171;
+    --red-bg: #1c0606;
+    --red-border: #7f1d1d;
+    --blue: #60a5fa;
+    --blue-bg: #060f1c;
+    --blue-border: #1e40af;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-primary);
+    line-height: 1.6;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Layout ── */
+  .app {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .sidebar-logo {
+    padding: 0 16px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+
+  .sidebar-logo .logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .logo-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-family: var(--mono);
+    margin-top: 1px;
+  }
+
+  .sidebar-section {
+    padding: 6px 8px 2px;
+  }
+
+  .sidebar-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    padding: 0 8px;
+    margin-bottom: 2px;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 450;
+    transition: all 0.12s;
+    line-height: 1.4;
+  }
+
+  .sidebar-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .sidebar-item.active {
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .sidebar-item .item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+    opacity: 0.5;
+  }
+
+  .sidebar-item.active .item-dot { opacity: 1; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px 16px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+  }
+
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 12px;
+    transition: all 0.12s;
+    border: none;
+    background: none;
+    width: 100%;
+  }
+
+  .theme-toggle:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+
+  /* ── Main content ── */
+  .main {
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  .page-header {
+    padding: 32px 48px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .breadcrumb {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-family: var(--mono);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .breadcrumb-sep { opacity: 0.4; }
+
+  .page-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    max-width: 600px;
+  }
+
+  /* ── Pill tabs ── */
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    padding: 0 48px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    overflow-x: auto;
+  }
+
+  .tab {
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.12s;
+    border: none;
+    background: none;
+    position: relative;
+    bottom: -1px;
+  }
+
+  .tab:hover { color: var(--text-primary); }
+
+  .tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ── Content sections ── */
+  .content-section {
+    display: none;
+    padding: 40px 48px;
+    max-width: 1100px;
+  }
+
+  .content-section.visible { display: block; }
+
+  /* ── Section headings ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+  }
+
+  .card-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.1s;
+  }
+
+  .card-header:hover { background: var(--bg-secondary); }
+
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .card-icon.purple { background: var(--accent-bg); }
+  .card-icon.green { background: var(--green-bg); }
+  .card-icon.yellow { background: var(--yellow-bg); }
+  .card-icon.blue { background: var(--blue-bg); }
+  .card-icon.red { background: var(--red-bg); }
+
+  .card-title-group { flex: 1 }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .card-badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    font-family: var(--mono);
+  }
+
+  .badge-purple { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-border); }
+  .badge-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+  .badge-red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+  .badge-neutral { background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border); }
+
+  .card-chevron {
+    color: var(--text-tertiary);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+
+  .card.open .card-chevron { transform: rotate(180deg); }
+
+  .card-body {
+    display: none;
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .card.open .card-body { display: block; }
+
+  /* ── Detail grid ── */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .detail-cell {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+
+  .detail-cell-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .detail-cell-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+
+  .detail-cell-value code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-tertiary);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  /* ── Insight box ── */
+  .insight-box {
+    background: var(--accent-bg);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .insight-box strong { color: var(--accent); font-weight: 600; }
+
+  .improvement-box {
+    background: var(--yellow-bg);
+    border: 1px solid var(--yellow-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .improvement-box strong { color: var(--yellow); font-weight: 600; }
+
+  /* ── Permission chips ── */
+  .permissions-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .perm-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px 3px 7px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+  }
+
+  .perm-chip .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+
+  .perm-chip.read .dot { background: var(--green); }
+  .perm-chip.write .dot { background: var(--accent); }
+  .perm-chip.ext-read .dot { background: var(--blue); }
+  .perm-chip.ext-write .dot { background: var(--yellow); }
+  .perm-chip.user-input .dot { background: var(--red); }
+
+  /* ── Mermaid diagram ── */
+  .diagram-wrap {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 32px 24px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+
+  .diagram-wrap .mermaid {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* ── Steps timeline ── */
+  .pipeline-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    padding-left: 32px;
+  }
+
+  .pipeline-steps::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 20px;
+    bottom: 20px;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .step-node {
+    position: relative;
+    padding-bottom: 4px;
+  }
+
+  .step-dot {
+    position: absolute;
+    left: -26px;
+    top: 18px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    background: var(--border);
+    z-index: 1;
+  }
+
+  .step-dot.active { background: var(--accent); }
+  .step-dot.warn { background: var(--yellow); }
+  .step-dot.error { background: var(--red); }
+
+  /* ── Cost table ── */
+  .cost-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+
+  .cost-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-tertiary);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+  }
+
+  .cost-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    vertical-align: top;
+  }
+
+  .cost-table tr:last-child td { border-bottom: none; }
+  .cost-table tr:hover td { background: var(--bg-secondary); }
+
+  .cost-table td code {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--bg-tertiary);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--text-primary);
+  }
+
+  /* ── Citation format cards ── */
+  .format-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  @media (max-width: 700px) {
+    .format-grid { grid-template-columns: 1fr; }
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .content-section { padding: 20px 16px; }
+    .page-header { padding: 20px 16px 16px; }
+    .tab-bar { padding: 0 16px; }
+  }
+
+  .format-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+  }
+
+  .format-card-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .format-card.f1 .format-card-label { color: var(--green); }
+  .format-card.f2 .format-card-label { color: var(--blue); }
+
+  .format-card code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-tertiary);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    display: block;
+    margin: 8px 0;
+    color: var(--text-primary);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* ── Decision matrix ── */
+  .decision-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-top: 12px;
+  }
+
+  .decision-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-tertiary);
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .decision-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .decision-table tr:last-child td { border-bottom: none; }
+
+  .decision-table td:first-child { color: var(--text-secondary); font-style: italic; }
+  .decision-table td:last-child { font-weight: 500; color: var(--text-primary); font-family: var(--mono); font-size: 12px; }
+
+  /* ── Failure modes ── */
+  .failure-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+  }
+
+  .failure-row:last-child { border-bottom: none; }
+  .failure-row .trap { color: var(--red); }
+  .failure-row .fix { color: var(--green); }
+  .failure-row .why { color: var(--text-secondary); }
+
+  /* ── Misc ── */
+  .text-mono {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 28px 0;
+  }
+
+  .inline-code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-tertiary);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--text-primary);
+  }
+
+  p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+
+  ul {
+    padding-left: 18px;
+    margin-bottom: 12px;
+  }
+
+  ul li {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 4px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+  /* Smooth Mermaid theming */
+  .mermaid svg { max-width: 100%; height: auto; }
+
+  /* Step number badge */
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .step-num.warn { background: var(--yellow); }
+  .step-num.muted { background: var(--bg-tertiary); color: var(--text-secondary); }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    background: var(--accent-bg);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    margin: 12px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .callout.warn {
+    border-left-color: var(--yellow);
+    background: var(--yellow-bg);
+  }
+
+  .callout.error {
+    border-left-color: var(--red);
+    background: var(--red-bg);
+  }
+
+  .callout strong { color: var(--text-primary); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">DC</div>
+        <div>
+          <div class="logo-text">DeepCitation</div>
+          <div class="logo-sub">/verify skill</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Views</div>
+      <a class="sidebar-item active" onclick="showTab('overview')" href="#">
+        <span class="item-dot"></span>Overview
+      </a>
+      <a class="sidebar-item" onclick="showTab('pipeline')" href="#">
+        <span class="item-dot"></span>Pipeline Steps
+      </a>
+      <a class="sidebar-item" onclick="showTab('citations')" href="#">
+        <span class="item-dot"></span>Citation Authoring
+      </a>
+      <a class="sidebar-item" onclick="showTab('costs')" href="#">
+        <span class="item-dot"></span>Cost & Permissions
+      </a>
+      <a class="sidebar-item" onclick="showTab('failures')" href="#">
+        <span class="item-dot"></span>Failure Modes
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Diagrams</div>
+      <a class="sidebar-item" onclick="showTab('diagrams')" href="#">
+        <span class="item-dot"></span>Flow Charts
+      </a>
+
+    <div class="sidebar-section" style="margin-top:8px;">
+      <div class="sidebar-section-label">Integration SDK</div>
+      <a class="sidebar-item" onclick="showTab('integration')" href="#">
+        <span class="item-dot"></span>Integration Flow
+      </a>
+    </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-label">Dark mode</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── Main ── -->
+  <div class="main">
+
+    <div class="page-header">
+      <div class="breadcrumb">
+        <span>skills</span>
+        <span class="breadcrumb-sep">/</span>
+        <span>verify</span>
+        <span class="breadcrumb-sep">/</span>
+        <span>SKILL.md</span>
+      </div>
+      <h1 class="page-title">/verify Pipeline Reference</h1>
+      <p class="page-subtitle">Interactive reference for the DeepCitation verification workflow — flow charts, step costs, citation rules, and failure modes.</p>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab active" onclick="showTab('overview')">Overview</button>
+      <button class="tab" onclick="showTab('pipeline')">Pipeline Steps</button>
+      <button class="tab" onclick="showTab('citations')">Citation Rules</button>
+      <button class="tab" onclick="showTab('costs')">Costs & Perms</button>
+      <button class="tab" onclick="showTab('failures')">Failure Modes</button>
+      <button class="tab" onclick="showTab('diagrams')">Flow Charts</button>
+      <button class="tab" onclick="showTab('integration')">Integration SDK</button>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: OVERVIEW
+    ══════════════════════════════════════════ -->
+    <div id="tab-overview" class="content-section visible">
+
+      <div class="section-label">What is /verify</div>
+      <p>The <span class="inline-code">/verify</span> skill is a three-phase evidence pipeline: it reads a source document, writes a claim-linked report body with precise in-text citation markers, and uses the DeepCitation CLI to produce a verified HTML artifact where every citation is anchored to a line in the original evidence.</p>
+
+      <div class="diagram-wrap" style="padding: 24px 16px;">
+        <div class="mermaid" id="overview-diagram">
+graph LR
+  A(["/verify prompt"]) --> B["① Prepare\nevidence"]
+  B --> C["② Write report\n+ citations"]
+  C --> D["③ Verify\nvia CLI"]
+  D --> E(["verified .html\nartifact"])
+
+  style A fill:#6c6af6,color:#fff,stroke:none
+  style E fill:#16a34a,color:#fff,stroke:none
+  style B fill:#f0efff,color:#1a1a1a,stroke:#c5c3ff
+  style C fill:#f0efff,color:#1a1a1a,stroke:#c5c3ff
+  style D fill:#f0efff,color:#1a1a1a,stroke:#c5c3ff
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-cell">
+          <div class="detail-cell-label">📌 Trigger condition</div>
+          <div class="detail-cell-value"><code>/verify</code> anywhere in the user prompt — regardless of phrasing. Always executes the full pipeline.</div>
+        </div>
+        <div class="detail-cell">
+          <div class="detail-cell-label">🎯 Output artifact</div>
+          <div class="detail-cell-value">A <code>*-verified.html</code> file in CWD with every citation matched, highlighted, and confidence-scored by the CLI.</div>
+        </div>
+        <div class="detail-cell">
+          <div class="detail-cell-label">⚙️ CLI dependency</div>
+          <div class="detail-cell-value"><code>deepcitation@latest</code> via <code>npx</code> — a bundled binary with its own HTTP transport. Never install external packages to work around it.</div>
+        </div>
+        <div class="detail-cell">
+          <div class="detail-cell-label">🔒 Hard invariant</div>
+          <div class="detail-cell-value">Only the CLI produces HTML. If <code>verify</code> fails, the deliverable does not exist — never hand-build a verified-looking HTML.</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-label">Path totals — at a glance</div>
+
+      <!-- Summary totals table -->
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px;">
+        <table class="cost-table">
+          <thead>
+            <tr>
+              <th>Path</th>
+              <th>⏱ Duration</th>
+              <th>🔢 Tool calls</th>
+              <th>📥 Input tokens</th>
+              <th>📤 Output tokens</th>
+              <th>Dominant cost driver</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Single-topic</strong> (PDF evidence)</td>
+              <td>~10–45s</td>
+              <td><strong>5</strong> <span style="color:var(--text-tertiary);font-size:11px;">(Bash×3, Read×1, Write×1)</span></td>
+              <td>~15–40k</td>
+              <td>~2–6k</td>
+              <td>Read summary — deepTextPages floods context</td>
+            </tr>
+            <tr>
+              <td><strong>Single-topic</strong> (URL / office)</td>
+              <td>~35–75s</td>
+              <td><strong>5</strong></td>
+              <td>~15–40k</td>
+              <td>~2–6k</td>
+              <td>prepare wall-time (~30s) dominates duration</td>
+            </tr>
+            <tr>
+              <td><strong>Multi-topic parallel</strong></td>
+              <td>~40–90s</td>
+              <td><strong>8</strong> <span style="color:var(--text-tertiary);font-size:11px;">(Bash×3, Read×1, Agent×2, Bash merge+verify×1, Bash open×1)</span></td>
+              <td>~40–100k</td>
+              <td>~6–16k</td>
+              <td>2× agent context — each agent receives full deepTextPages</td>
+            </tr>
+            <tr>
+              <td><strong>Auth recovery</strong> (added to any path)</td>
+              <td>+30–180s</td>
+              <td>+2–3</td>
+              <td>+~500</td>
+              <td>+~200</td>
+              <td>Human OAuth wait dominates duration</td>
+            </tr>
+            <tr>
+              <td><strong>Merge failure + retry</strong> (added to parallel)</td>
+              <td>+5–30s</td>
+              <td>+2–4 <span style="color:var(--text-tertiary);font-size:11px;">(Read×2 section files, Edit/Write×1, Bash×1)</span></td>
+              <td>+~5–15k</td>
+              <td>+~1–3k</td>
+              <td>Reading both section files back into context</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-label">Three phases — per-iteration detail</div>
+
+      <div class="pipeline-steps">
+        <!-- ── Step 1 ── -->
+        <div class="step-node">
+          <div class="step-dot active"></div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="card-header" onclick="toggleCard(this)">
+              <div class="step-num">1</div>
+              <div class="card-title-group">
+                <div class="card-title">Prepare evidence</div>
+                <div class="card-desc">Read the authoritative source into context via the CLI reader</div>
+              </div>
+              <div class="card-badges">
+                <span class="badge badge-blue">ext-read</span>
+                <span class="badge badge-neutral">1–30s</span>
+                <span class="badge badge-purple">2–3 calls</span>
+              </div>
+              <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="card-body">
+              <div class="detail-grid" style="margin-top:14px;">
+                <div class="detail-cell">
+                  <div class="detail-cell-label">⏱ Duration</div>
+                  <div class="detail-cell-value">PDF: <strong>1–5s</strong> · URL/Office: <strong>5–30s</strong> · Multiple sources add in parallel so only the slowest counts</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">🔢 Tool calls</div>
+                  <div class="detail-cell-value"><code>Bash</code> ×1 (mkdir + prepare piped together) · <code>Read</code> ×1 (summary file into context) = <strong>2 calls</strong>. +1 Bash if auth triggered.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">📥 Input tokens</div>
+                  <div class="detail-cell-value">Minimal for the Bash call (~100 tok). The <strong>Read</strong> output is what matters — deepTextPages for a 20-page PDF is typically <strong>8–25k tokens</strong> added to context.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">📤 Output tokens</div>
+                  <div class="detail-cell-value">~50–200 tok (model acknowledgement of the prepare result). The costly direction is <em>input</em> — the evidence text flowing into context window.</div>
+                </div>
+              </div>
+              <div class="callout" style="margin-top:12px;"><strong>Why this matters:</strong> Loading <code>deepTextPages</code> into context is the RE2-based matching mechanism — evidence text in context improves citation accuracy. <code>prepare</code> is the <em>only</em> way to read evidence; never use Glob/Grep/Read on the raw source.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Step 2 single ── -->
+        <div class="step-node">
+          <div class="step-dot active"></div>
+          <div class="card" style="margin-bottom:4px;">
+            <div class="card-header" onclick="toggleCard(this)">
+              <div class="step-num">2</div>
+              <div class="card-title-group">
+                <div class="card-title">Respond with citations — single topic</div>
+                <div class="card-desc">Write body inline: report prose + CITATION_DATA block → .deepcitation/draft-body.md</div>
+              </div>
+              <div class="card-badges">
+                <span class="badge badge-purple">write</span>
+                <span class="badge badge-neutral">gen-time</span>
+                <span class="badge badge-purple">1 call</span>
+              </div>
+              <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="card-body">
+              <div class="detail-grid" style="margin-top:14px;">
+                <div class="detail-cell">
+                  <div class="detail-cell-label">⏱ Duration</div>
+                  <div class="detail-cell-value">Model generation — typically <strong>5–20s</strong> for a 500–1500 word report. Scales with output length, not input length.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">🔢 Tool calls</div>
+                  <div class="detail-cell-value"><code>Write</code> ×1 (body.md) = <strong>1 call</strong>. The model reasons inline before writing — no extra Read calls.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">📥 Input tokens</div>
+                  <div class="detail-cell-value">Context carries over from Step 1: <strong>system prompt + deepTextPages + user question</strong>. For a 20-page PDF this is typically <strong>12–30k input tokens</strong> at this point.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">📤 Output tokens</div>
+                  <div class="detail-cell-value">Report prose (~500–1500 words) + CITATION_DATA JSON block. Estimate: <strong>1.5–4k output tokens</strong>. The CITATION_DATA adds ~50–200 tokens depending on citation count.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Step 2 parallel ── -->
+        <div class="step-node">
+          <div class="step-dot warn"></div>
+          <div class="card" style="margin-bottom:12px;border-color:var(--yellow-border);">
+            <div class="card-header" onclick="toggleCard(this)">
+              <div class="step-num warn">2</div>
+              <div class="card-title-group">
+                <div class="card-title">Respond with citations — parallel (multi-topic)</div>
+                <div class="card-desc">Agent A + Agent B run simultaneously, each writing a section file. Then merge.</div>
+              </div>
+              <div class="card-badges">
+                <span class="badge badge-yellow">2× agent</span>
+                <span class="badge badge-neutral">+merge</span>
+                <span class="badge badge-purple">3 calls</span>
+              </div>
+              <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="card-body">
+              <div class="detail-grid" style="margin-top:14px;">
+                <div class="detail-cell">
+                  <div class="detail-cell-label">⏱ Duration</div>
+                  <div class="detail-cell-value">Agents run in parallel so wall time ≈ slowest agent, typically <strong>15–40s</strong> per agent. Merge adds ~1s. Total Step 2 wall time: <strong>16–41s</strong>.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">🔢 Tool calls</div>
+                  <div class="detail-cell-value"><code>Agent</code> ×2 (parallel dispatch) + <code>Bash</code> ×1 (merge) = <strong>3 calls</strong>. Each agent internally uses Write ×1.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">📥 Input tokens</div>
+                  <div class="detail-cell-value"><strong>2× the single-topic input</strong> — each agent receives the full deepTextPages copy in its prompt. For a 20-page PDF: <strong>24–60k input tokens total</strong> across both agents.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">📤 Output tokens</div>
+                  <div class="detail-cell-value">Each agent writes ~half the report: <strong>1–2.5k tokens each</strong>. Merge produces no new tokens. Total output: <strong>2–5k tokens</strong>.</div>
+                </div>
+              </div>
+              <div class="callout warn" style="margin-top:12px;"><strong>Token cost warning:</strong> The 2× input cost is intentional — each agent needs the full evidence to reason accurately. This is the largest single token spend in the pipeline. Multi-topic parallel is faster in wall time but doubles input cost vs single-topic.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Step 3 ── -->
+        <div class="step-node">
+          <div class="step-dot active"></div>
+          <div class="card">
+            <div class="card-header" onclick="toggleCard(this)">
+              <div class="step-num">3</div>
+              <div class="card-title-group">
+                <div class="card-title">Verify via CLI</div>
+                <div class="card-desc">CLI matches anchors, scores confidence, produces HTML artifact, opens it</div>
+              </div>
+              <div class="card-badges">
+                <span class="badge badge-yellow">ext-write</span>
+                <span class="badge badge-neutral">1–30s</span>
+                <span class="badge badge-purple">2 calls</span>
+              </div>
+              <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <div class="card-body">
+              <div class="detail-grid" style="margin-top:14px;">
+                <div class="detail-cell">
+                  <div class="detail-cell-label">⏱ Duration</div>
+                  <div class="detail-cell-value">CLI verify: <strong>0.5–5s</strong> typical, up to 30s worst case. Open command: &lt;1s. Total Step 3: <strong>1–6s</strong> typical.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">🔢 Tool calls</div>
+                  <div class="detail-cell-value"><code>Bash</code> ×1 (verify + open chained with <code>||</code>) = <strong>1–2 calls</strong> depending on whether verify and open are chained or separate.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">📥 Input tokens</div>
+                  <div class="detail-cell-value">~100–300 tok (the Bash command itself). The CLI handles matching server-side — no evidence text needed in context here.</div>
+                </div>
+                <div class="detail-cell">
+                  <div class="detail-cell-label">📤 Output tokens</div>
+                  <div class="detail-cell-value">~100–400 tok — model summary line: <code>12/14 verified · 2 partial → topic-verified.html</code>. Cheapest step in the pipeline.</div>
+                </div>
+              </div>
+              <div class="callout" style="margin-top:12px;"><strong>Post-verify:</strong> Open with <code>explorer.exe</code> (WSL), <code>xdg-open</code> (Linux), or <code>open</code> (macOS). Verify runs exactly once — the API handles partial matches; unmatched anchors are flagged in output.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: PIPELINE STEPS
+    ══════════════════════════════════════════ -->
+    <div id="tab-pipeline" class="content-section">
+
+      <div class="section-label">Step 1 — Prepare</div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon purple">📥</div>
+          <div class="card-title-group">
+            <div class="card-title">Evidence identification & triage</div>
+            <div class="card-desc">Decide which file/URL is evidence before running any command</div>
+          </div>
+          <div class="card-badges">
+            <span class="badge badge-neutral">decision</span>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <table class="decision-table" style="margin-top:16px;">
+            <thead>
+              <tr><th>Situation</th><th>Evidence source</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>User provided a file/URL</td><td>That file/URL</td></tr>
+              <tr><td>Prior chat or user-supplied file contains claims</td><td>Use claims verbatim — prepare the separate evidence doc</td></tr>
+              <tr><td>Claims about public/official subjects, no evidence</td><td>Web-search for primary sources (legislation, official reports)</td></tr>
+              <tr><td>Existing verified HTML already produced</td><td>Skip to Step 3 with <code>verify --html</code></td></tr>
+              <tr><td>Claims file was mistakenly used as evidence</td><td>Web-search for primary sources, re-prepare</td></tr>
+              <tr><td>Ambiguous — unclear which is claims vs evidence</td><td>Ask the user</td></tr>
+            </tbody>
+          </table>
+          <div class="callout warn" style="margin-top:12px;"><strong>A claim cannot be its own evidence.</strong> If you prepared the claims file as evidence, stop and find a primary source.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon blue">⚙️</div>
+          <div class="card-title-group">
+            <div class="card-title">prepare command</div>
+            <div class="card-desc">CLI invocation, output location, multi-source parallelism</div>
+          </div>
+          <div class="card-badges">
+            <span class="badge badge-blue">ext-read</span>
+            <span class="badge badge-neutral">1–30s</span>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <div class="detail-grid" style="margin-top:14px;">
+            <div class="detail-cell">
+              <div class="detail-cell-label">Command</div>
+              <div class="detail-cell-value"><code>mkdir -p .deepcitation && npx -y deepcitation@latest prepare &lt;file-or-url&gt; --text &gt; .deepcitation/&lt;name&gt;.txt 2&gt;&amp;1</code></div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Multiple sources</div>
+              <div class="detail-cell-value">Run all in parallel with <code>&amp;</code> + <code>wait</code></div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Auth signal</div>
+              <div class="detail-cell-value">Output contains literal phrase <code>action needed</code> → run auth flow</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Upgrade signal</div>
+              <div class="detail-cell-value">Output contains <code>Update available</code> → run <code>npm install -g deepcitation@latest</code> then retry</div>
+            </div>
+          </div>
+          <div class="improvement-box">
+            <strong>What could be better:</strong> The prepare output file naming convention (<code>.deepcitation/&lt;name&gt;.txt</code>) is implicit — the skill doesn't specify how to derive <code>&lt;name&gt;</code> from the input path. A canonical slug rule (e.g., basename without extension, lowercased) would remove ambiguity.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon red">🔑</div>
+          <div class="card-title-group">
+            <div class="card-title">Auth recovery flow</div>
+            <div class="card-desc">OAuth via script pseudo-TTY or manual key fallback</div>
+          </div>
+          <div class="card-badges">
+            <span class="badge badge-red">user-input (maybe)</span>
+            <span class="badge badge-neutral">≤180s</span>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <p style="margin-top:12px;">Only triggered if <code class="inline-code">prepare</code> or <code class="inline-code">verify</code> output contains the exact phrase <code class="inline-code">action needed</code>. The primary path uses <code class="inline-code">script -q -c "npx -y deepcitation@latest auth" /dev/null</code> to create a pseudo-TTY so Node's <code class="inline-code">process.stdin.isTTY</code> returns true and the browser OAuth flow opens.</p>
+          <div class="detail-grid">
+            <div class="detail-cell">
+              <div class="detail-cell-label">Primary (TTY available)</div>
+              <div class="detail-cell-value"><code>script -q -c "npx -y deepcitation@latest auth" /dev/null</code> — browser opens, completes OAuth, writes to <code>~/.deepcitation/credentials.json</code></div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Fallback (cloud sandbox)</div>
+              <div class="detail-cell-value">Show <code>https://deepcitation.com/cli-auth?manual=true</code> to user, ask for <code>sk-dc-…</code> key, run <code>deepcitation auth --key '&lt;key&gt;'</code></div>
+            </div>
+          </div>
+          <div class="callout error" style="margin-top:10px;"><strong>Never stop and ask the user to auth manually</strong> — run the auth command yourself. Only fall back to key-paste if <code>script</code> fails or <code>DC_NON_INTERACTIVE=1</code> is set.</div>
+          <div class="improvement-box" style="margin-top:10px;">
+            <strong>What could be better:</strong> The 180s timeout is generous for human OAuth — but a faster local check (e.g., reading <code>~/.deepcitation/credentials.json</code> before invoking auth) would skip the wait if credentials already exist and are valid.
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-label">Step 2 — Respond with Citations</div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon purple">🔀</div>
+          <div class="card-title-group">
+            <div class="card-title">Single vs parallel dispatch</div>
+            <div class="card-desc">When to write inline vs spawn two sub-agents</div>
+          </div>
+          <div class="card-badges">
+            <span class="badge badge-neutral">routing decision</span>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <div class="detail-grid" style="margin-top:14px;">
+            <div class="detail-cell">
+              <div class="detail-cell-label">Single topic</div>
+              <div class="detail-cell-value">Write body directly to <code>.deepcitation/&lt;draft&gt;-body.md</code> inline. Run verify on it.</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">2+ distinct topics</div>
+              <div class="detail-cell-value">Spawn Agent A (citations 1+) → <code>section-a.md</code> and Agent B (citations 100+) → <code>section-b.md</code> in parallel. Then merge.</div>
+            </div>
+          </div>
+          <div class="callout" style="margin-top:10px;">When the Agent tool is available, you <strong>MUST</strong> use parallel dispatch for multi-topic questions — not sequential writing. The non-overlapping citation ID ranges (1+ vs 100+) let the merge command renumber without collisions.</div>
+          <div class="improvement-box" style="margin-top:10px;">
+            <strong>What could be better:</strong> The threshold "2+ distinct sections" is fuzzy. A more explicit rule — e.g., "2+ top-level headings expected in the output" — would reduce model judgment calls. Also, 3+ sections could benefit from a third agent band (200+).
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon green">🔗</div>
+          <div class="card-title-group">
+            <div class="card-title">Merge + verify (parallel path)</div>
+            <div class="card-desc">Join section files, renumber citations, then produce HTML</div>
+          </div>
+          <div class="card-badges">
+            <span class="badge badge-yellow">ext-write</span>
+            <span class="badge badge-neutral">~5–40s total</span>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <p style="margin-top:12px;">The merge command renumbers citations across both section files and joins them into a single body. Verification happens in the same <code class="inline-code">&&</code> chain — if merge exits non-zero, the chain aborts before verify runs.</p>
+          <div class="callout error" style="margin-top:10px;"><strong>Merge failure = diagnostic mode.</strong> Read both section files to find the broken <code>CITATION_DATA</code> block. Common causes: empty body, JSON wrapped in a markdown ` ```json ``` ` fence, missing <code>n</code> field, truncated JSON. Fix then re-run merge — do NOT re-dispatch agents unless the error can't be fixed inline.</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-label">Step 3 — Verify</div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon green">✅</div>
+          <div class="card-title-group">
+            <div class="card-title">verify --markdown command</div>
+            <div class="card-desc">Match anchors, score confidence, emit HTML artifact</div>
+          </div>
+          <div class="card-badges">
+            <span class="badge badge-yellow">ext-write</span>
+            <span class="badge badge-neutral">~5–30s</span>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <div class="detail-grid" style="margin-top:14px;">
+            <div class="detail-cell">
+              <div class="detail-cell-label">Command (from markdown body)</div>
+              <div class="detail-cell-value"><code>npx -y deepcitation@latest verify --markdown .deepcitation/&lt;draft&gt;-body.md --title "Title" --out &lt;topic&gt;-verified.html</code></div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Command (from existing HTML)</div>
+              <div class="detail-cell-value"><code>npx -y deepcitation@latest verify --html &lt;existing&gt;.html --title "Title" --out &lt;topic&gt;-verified.html</code></div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Options</div>
+              <div class="detail-cell-value"><code>--style plain|report</code> (default: report) · <code>--audience general|executive|technical|legal|medical</code> · <code>--theme auto|light|dark</code></div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Run count invariant</div>
+              <div class="detail-cell-value">Exactly <strong>once</strong>. Do not edit draft and re-verify. The API handles partial matches — unmatched anchors are flagged in output.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: CITATION RULES
+    ══════════════════════════════════════════ -->
+    <div id="tab-citations" class="content-section">
+
+      <div class="section-label">Domain model</div>
+      <p>Every citation connects two documents. <strong>Domain A</strong> is the asserting document (your report). <strong>Domain B</strong> is the authoritative evidence. The CLI's search locates Domain B text and frames it in the keyholeViewport — terse anchors produce tighter framing.</p>
+
+      <div class="format-grid">
+        <div class="format-card f1">
+          <div class="format-card-label">Format 1 — verbatim</div>
+          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">When <code>sourceMatch</code> reads naturally as <code>claimText</code> in prose. Bold the term directly.</p>
+          <code>The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].</code>
+          <p style="font-size:12px;color:var(--text-secondary);margin:6px 0 0;">claimText === sourceMatch (<code>isVerbatim: true</code>). Place <code>[N]</code> immediately after the bold term.</p>
+        </div>
+        <div class="format-card f2">
+          <div class="format-card-label">Format 2 — labelled link</div>
+          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">When prose has its own voice, or the source term doesn't fit naturally.</p>
+          <code>[revenue grew](cite:1 '$4.2 million') over the prior year</code>
+          <p style="font-size:12px;color:var(--text-secondary);margin:6px 0 0;"><code>claimText</code> = Domain A prose. <code>sourceMatch</code> = verbatim Domain B text inside single quotes.</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-label">sourceMatch selection rules</div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon purple">🎯</div>
+          <div class="card-title-group">
+            <div class="card-title">Brevity rules — ≤4 words, ≤40 chars</div>
+            <div class="card-desc">Pick the tersest unique identifier from Domain B first, then decide format</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <div class="detail-grid" style="margin-top:14px;">
+            <div class="detail-cell">
+              <div class="detail-cell-label">Quantifier-drop</div>
+              <div class="detail-cell-value">"six ground floor commercial units" → <strong>ground floor commercial</strong> (3w) — drop the count</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Clause-truncation</div>
+              <div class="detail-cell-value">"will automatically convert into shares" → <strong>automatically convert</strong> (2w) — cite the trigger verb</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Priority-label only</div>
+              <div class="detail-cell-value">"Senior to payments for Common Stock" → <strong>Senior to</strong> (2w) — the tier marker IS the claim</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Definition — cite the term</div>
+              <div class="detail-cell-value">"Safe Price means the price per share equal to…" → <strong>Safe Price</strong> (2w) — term, not definition body</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Tax threshold</div>
+              <div class="detail-cell-value">"you can generally deduct only 50% of…" → <strong>50%</strong> (1w) — cite the number</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Multi-value list</div>
+              <div class="detail-cell-value">"Sections 304, 305, 306, 354…" → <strong>Section 304</strong> (2w) — cite one item or a category label</div>
+            </div>
+          </div>
+          <div class="callout" style="margin-top:12px;"><strong>Self-check gate:</strong> Pick <code>sourceMatch</code> first. If it's 5+ words, trim. Ctrl+F test: could a reader search this phrase and find it uniquely? If it takes 5+ words to be unique, pick the noun head.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon yellow">⚠️</div>
+          <div class="card-title-group">
+            <div class="card-title">Traps — heading anchors & index pages</div>
+            <div class="card-desc">Common cases where a superficially correct anchor actually fails</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <div class="callout warn" style="margin-top:14px;"><strong>Heading-only anchors:</strong> If the same phrase appears as a section heading AND inside the operative sentence, anchoring the heading will verify against the wrong location. Always anchor the operative clause, not the heading.</div>
+          <div class="callout error" style="margin-top:8px;"><strong>Index/appendix/TOC pages:</strong> Never set <code>p</code> to an index page. If a dollar amount or term appears in both the body and an A-Z index, always point at the body text page where the operative rule lives. Index entries produce garbage <code>sourceContext</code>.</div>
+          <div class="callout warn" style="margin-top:8px;"><strong>Category labels vs operative phrases:</strong> "commercial units" is a topic label. "parking requirements" or "no right of access" are operative rules. Prefer operative phrases that prove the claim.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon blue">📋</div>
+          <div class="card-title-group">
+            <div class="card-title">CITATION_DATA block format</div>
+            <div class="card-desc">Fields, page ID format, line ranges, and wrapping rules</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <div class="detail-grid" style="margin-top:14px;">
+            <div class="detail-cell">
+              <div class="detail-cell-label">n</div>
+              <div class="detail-cell-value">Citation ID — unique integer. Reuse the same <code>n</code> in prose for the same fact; only one entry in the CITATION_DATA block per <code>n</code>.</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">k (sourceMatch)</div>
+              <div class="detail-cell-value">Verbatim Domain B text — must be a contiguous substring of <code>sourceContext</code>. Never a paraphrase. Never with ellipsis.</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">p (page ID)</div>
+              <div class="detail-cell-value">Format: <code>"pageNumber_arrayIndex"</code> from the <code>&lt;page_number_N_index_I&gt;</code> tag. Example: <code>"3_0"</code> = page 3, first occurrence.</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">l (lines)</div>
+              <div class="detail-cell-value">Array of line IDs including the <code>sourceMatch</code> line plus 1–2 adjacent lines. Example: <code>[19, 20, 21]</code>. Gives the <code>sourceContext</code> enough surrounding text to frame the highlight.</div>
+            </div>
+          </div>
+          <div class="callout error" style="margin-top:12px;"><strong>Do NOT wrap the JSON in a markdown fence.</strong> The <code>&lt;&lt;&lt;CITATION_DATA&gt;&gt;&gt;</code> / <code>&lt;&lt;&lt;END_CITATION_DATA&gt;&gt;&gt;</code> delimiters are the only wrappers the parser recognizes. A ` ```json ``` ` fence causes a silent empty parse and breaks merge.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: COSTS & PERMISSIONS
+    ══════════════════════════════════════════ -->
+    <div id="tab-costs" class="content-section">
+
+      <div class="section-label">Permission legend</div>
+      <div class="permissions-row" style="margin-bottom:24px;">
+        <div class="perm-chip read"><div class="dot"></div>read (local file)</div>
+        <div class="perm-chip write"><div class="dot"></div>write (local file)</div>
+        <div class="perm-chip ext-read"><div class="dot"></div>ext-read (DeepCitation API / web)</div>
+        <div class="perm-chip ext-write"><div class="dot"></div>ext-write (DeepCitation API → HTML)</div>
+        <div class="perm-chip user-input"><div class="dot"></div>user-input (OAuth browser interaction)</div>
+      </div>
+
+      <div class="section-label">Per-command cost table</div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px;">
+        <table class="cost-table">
+          <thead>
+            <tr>
+              <th>Command</th>
+              <th>Typical</th>
+              <th>Worst case</th>
+              <th>If exceeded</th>
+              <th>Permissions</th>
+              <th>Token cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>prepare</code> PDF</td>
+              <td>~1s</td>
+              <td>~5s</td>
+              <td>Almost certainly hung — abort</td>
+              <td>
+                <div class="permissions-row">
+                  <div class="perm-chip ext-read"><div class="dot"></div>ext-read</div>
+                  <div class="perm-chip write"><div class="dot"></div>write</div>
+                </div>
+              </td>
+              <td>High (full deepTextPages loaded)</td>
+            </tr>
+            <tr>
+              <td><code>prepare</code> URL/office</td>
+              <td>~5s</td>
+              <td>~30s</td>
+              <td>Wait up to 60s, then abort</td>
+              <td>
+                <div class="permissions-row">
+                  <div class="perm-chip ext-read"><div class="dot"></div>ext-read</div>
+                  <div class="perm-chip write"><div class="dot"></div>write</div>
+                </div>
+              </td>
+              <td>High</td>
+            </tr>
+            <tr>
+              <td><code>Read</code> prepare output</td>
+              <td>&lt;1s</td>
+              <td>~1s</td>
+              <td>N/A</td>
+              <td>
+                <div class="permissions-row">
+                  <div class="perm-chip read"><div class="dot"></div>read</div>
+                </div>
+              </td>
+              <td>Very high — evidence fills context window. This is intentional for RE2 accuracy.</td>
+            </tr>
+            <tr>
+              <td><code>auth</code> (OAuth)</td>
+              <td>browser-dependent</td>
+              <td>180s</td>
+              <td>Use manual key fallback</td>
+              <td>
+                <div class="permissions-row">
+                  <div class="perm-chip ext-write"><div class="dot"></div>ext-write</div>
+                  <div class="perm-chip user-input"><div class="dot"></div>user-input</div>
+                  <div class="perm-chip write"><div class="dot"></div>write</div>
+                </div>
+              </td>
+              <td>Minimal</td>
+            </tr>
+            <tr>
+              <td><code>Write</code> body (single topic)</td>
+              <td>output-dependent</td>
+              <td>—</td>
+              <td>N/A</td>
+              <td>
+                <div class="permissions-row">
+                  <div class="perm-chip write"><div class="dot"></div>write</div>
+                </div>
+              </td>
+              <td>Medium → High (depends on evidence density)</td>
+            </tr>
+            <tr>
+              <td>Parallel Agent dispatch (2 sub-agents)</td>
+              <td>~2× single</td>
+              <td>~2× worst-case</td>
+              <td>—</td>
+              <td>
+                <div class="permissions-row">
+                  <div class="perm-chip write"><div class="dot"></div>write</div>
+                </div>
+              </td>
+              <td>Very high — each agent receives full deepTextPages copy. 2× context.</td>
+            </tr>
+            <tr>
+              <td><code>merge</code></td>
+              <td>~0.5s</td>
+              <td>~5s</td>
+              <td>Diagnostic mode — read section files</td>
+              <td>
+                <div class="permissions-row">
+                  <div class="perm-chip read"><div class="dot"></div>read</div>
+                  <div class="perm-chip write"><div class="dot"></div>write</div>
+                </div>
+              </td>
+              <td>Minimal</td>
+            </tr>
+            <tr>
+              <td><code>verify --markdown</code></td>
+              <td>~0.5s</td>
+              <td>~5s</td>
+              <td>Almost certainly hung — abort</td>
+              <td>
+                <div class="permissions-row">
+                  <div class="perm-chip ext-write"><div class="dot"></div>ext-write</div>
+                  <div class="perm-chip write"><div class="dot"></div>write</div>
+                </div>
+              </td>
+              <td>Minimal (CLI sends citation data; receives match results)</td>
+            </tr>
+            <tr>
+              <td>Open HTML (explorer/xdg/open)</td>
+              <td>&lt;1s</td>
+              <td>~1s</td>
+              <td>Fall back to next OS command</td>
+              <td>
+                <div class="permissions-row">
+                  <div class="perm-chip read"><div class="dot"></div>read</div>
+                </div>
+              </td>
+              <td>None</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-label">Cloud sandbox constraints</div>
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon yellow">☁️</div>
+          <div class="card-title-group">
+            <div class="card-title">Cowork / cloud sandbox rules</div>
+            <div class="card-desc">Constraints that apply when CLAUDE_CODE_REMOTE == "true"</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <ul style="margin-top:12px;">
+            <li>The CLI is a <strong>single bundled binary</strong> — installing external packages (<code>undici</code>, <code>node-fetch</code>) cannot affect its network behavior. Never attempt this.</li>
+            <li>Do <strong>not</strong> modify <code>HTTP_PROXY</code> / <code>HTTPS_PROXY</code> on individual commands. The CLI auto-detects the sandbox proxy.</li>
+            <li>The CLI enforces a <strong>90-second hard ceiling</strong> on every request. Do not extend via <code>&amp;</code> backgrounding, sleep loops, or <code>timeout 600 npx</code>.</li>
+            <li>When a command times out, the failure is in the <strong>network layer</strong>, not the CLI logic. Do not simplify input to retry.</li>
+            <li>Recognize <code>__DC_ERROR__ &#123;"recoverable":false&#125;</code> on stderr → hard stop, no retry.</li>
+          </ul>
+          <div class="improvement-box">
+            <strong>What could be better:</strong> The sandbox detection is a single env var check (<code>$CLAUDE_CODE_REMOTE</code>). A more robust signal — e.g., checking for the presence of the proxy hostname in <code>HTTP_PROXY</code> — would make the constraints self-documenting without requiring the model to remember the env var name.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: FAILURE MODES
+    ══════════════════════════════════════════ -->
+    <div id="tab-failures" class="content-section">
+
+      <div class="section-label">Citation authoring failure table</div>
+      <p>Common traps where the model's natural instinct produces a bad anchor — and the correct fix.</p>
+
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px;">
+        <table class="cost-table">
+          <thead>
+            <tr>
+              <th>Trap ✗</th>
+              <th>Fix ✓</th>
+              <th>Root cause</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>"Junior to payment of outstanding indebtedness"</code> (6w)</td>
+              <td><code>"outstanding indebtedness"</code> (2w)</td>
+              <td>Distinctive noun carries the claim. Quantifiers and prepositions are filler.</td>
+            </tr>
+            <tr>
+              <td><code>claimText = **Equity Financing**</code>, <code>k = "when the company raises capital"</code></td>
+              <td><code>k = "Equity Financing"</code> (Format 1)</td>
+              <td><code>k</code> must be verbatim Domain B text, not a paraphrase. Reader clicks bold term → sees sourceMatch highlighted — they must be the same.</td>
+            </tr>
+            <tr>
+              <td><code>"Tooth Numbers 3 9 14 19 24 30"</code> (7w)</td>
+              <td><code>"Tooth Numbers"</code> (2w)</td>
+              <td>Multi-value fields: cite one value or the list header, not the whole list. The list IS the sourceContext.</td>
+            </tr>
+            <tr>
+              <td><code>"earliest to occur...prior to"</code> (ellipsis)</td>
+              <td><code>"earliest to occur"</code> (3w)</td>
+              <td>sourceMatch must be a contiguous substring. Ellipsis means it spans two regions → two citations.</td>
+            </tr>
+            <tr>
+              <td><code>"first 5 years of employment"</code> (5w)</td>
+              <td><code>"5 years"</code> (2w)</td>
+              <td>Cite the threshold, drop the qualifying phrase. Prose carries: "within the first <strong>5 years</strong> [3] of employment".</td>
+            </tr>
+            <tr>
+              <td><code>"30% of the adjustable taxable income"</code> (6w)</td>
+              <td><code>"adjustable taxable income"</code> (3w)</td>
+              <td>Cite the distinctive noun, not the full clause. Prose: "capped at 30% of <strong>adjustable taxable income</strong> [5]".</td>
+            </tr>
+            <tr>
+              <td>Anchor points to A-Z index page for a dollar amount</td>
+              <td>Point <code>p</code> at body text page where the rule lives</td>
+              <td>Index entries produce garbage sourceContext ("A Club dues 47 F Carrying charge 25…").</td>
+            </tr>
+            <tr>
+              <td>Anchor the section heading <code>EXTERIOR PARKING UNITS</code></td>
+              <td>Anchor the operative clause: <code>"underground parking units"</code></td>
+              <td>Heading appears in the doc twice. The keyholeViewport lands on the heading, not the evidence sentence.</td>
+            </tr>
+            <tr>
+              <td>JSON inside <code>&lt;&lt;&lt;CITATION_DATA&gt;&gt;&gt;</code> wrapped in ```json fence</td>
+              <td>Raw JSON — no fence, just the delimiters</td>
+              <td>The fence confuses the repair heuristic → silent empty parse → merge fails.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-label">Pipeline failure modes</div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon red">🔴</div>
+          <div class="card-title-group">
+            <div class="card-title">Hard stops — non-recoverable</div>
+            <div class="card-desc">Conditions where the pipeline must halt</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <ul style="margin-top:12px;">
+            <li><code class="inline-code">__DC_ERROR__ &#123;"recoverable":false&#125;</code> on stderr → surface verbatim, stop</li>
+            <li>Auth fails AND <code>script</code> is unavailable AND <code>DC_NON_INTERACTIVE=1</code> AND user doesn't provide a key</li>
+            <li>Claims file was used as evidence and no primary source can be found</li>
+          </ul>
+          <div class="callout error" style="margin-top:10px;"><strong>Never build a hand-crafted HTML report as a fallback.</strong> Returning a verified-looking HTML from your own knowledge misrepresents unverified text as verified. If <code>verify</code> cannot complete, the deliverable does not exist.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon yellow">🟡</div>
+          <div class="card-title-group">
+            <div class="card-title">Recoverable failures</div>
+            <div class="card-desc">Conditions with defined recovery paths</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <ul style="margin-top:12px;">
+            <li><strong>Auth needed</strong>: output contains "action needed" → run auth flow (script → browser, or manual key), retry prepare</li>
+            <li><strong>Update available</strong>: run <code>npm install -g deepcitation@latest</code>, retry command</li>
+            <li><strong>Merge exits non-zero</strong>: read both section files, find malformed CITATION_DATA, fix inline or re-dispatch the broken agent with the stderr output as context</li>
+            <li><strong>Unmatched anchor in verify output</strong>: check for typos, shorten <code>k</code> to a more distinctive term — but do not re-run verify</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: FLOW CHARTS
+    ══════════════════════════════════════════ -->
+    <div id="tab-diagrams" class="content-section">
+
+      <div class="section-label">Top-level pipeline</div>
+      <p>High-level flow from prompt to HTML artifact, including the multi-topic parallel path.</p>
+
+      <div class="diagram-wrap">
+        <div class="mermaid" id="main-flow">
+flowchart TD
+    A(["/verify prompt received"]) --> B{"Evidence\nidentified?"}
+    B -->|"File or URL provided"| C["prepare source\n→ .deepcitation/name.txt"]
+    B -->|"Public/official claims,\nno evidence"| D["Web-search\nprimary sources"]
+    B -->|"Existing verified HTML"| E["Skip to Step 3\n--html flag"]
+    B -->|"Ambiguous"| F(["Ask user"])
+
+    D --> C
+    C --> G{"Auth check"}
+    G -->|"'action needed' in output"| H["Run deepcitation auth\n(script TTY → browser)"]
+    H --> I{"Auth OK?"}
+    I -->|"Yes"| J["Retry prepare"]
+    I -->|"No / DC_NON_INTERACTIVE"| K["Show manual-key URL\nwait for sk-dc-… key"]
+    K --> L["deepcitation auth --key '…'\nRetry prepare"]
+    J --> M["Read .deepcitation/name.txt\n(deepTextPages into context)"]
+    G -->|"OK"| M
+
+    M --> N{"1 topic or\n2+ topics?"}
+    N -->|"Single topic"| O["Write body inline\n→ .deepcitation/draft-body.md"]
+    N -->|"2+ distinct sections"| P["Spawn Agent A [1+]\n→ section-a.md"]
+    N -->|"2+ distinct sections"| Q["Spawn Agent B [100+]\n→ section-b.md"]
+    P & Q --> R["merge --a section-a.md\n--b section-b.md\n--out draft-body.md"]
+
+    R --> S{"merge\nexited 0?"}
+    S -->|"No"| T["Read both section files\nDiagnose CITATION_DATA\nFix and re-merge"]
+    T --> R
+    S -->|"Yes"| U
+    O --> U["verify --markdown draft-body.md\n--out topic-verified.html"]
+    E --> U
+
+    U --> V["Open .html\n(explorer/xdg/open)"]
+    V --> W(["12/14 verified · 2 partial\n→ topic-verified.html"])
+
+    style A fill:#6c6af6,color:#fff,stroke:none
+    style W fill:#16a34a,color:#fff,stroke:none
+    style F fill:#dc2626,color:#fff,stroke:none
+    style T fill:#fffbeb,color:#b45309,stroke:#fed7aa
+    style H fill:#eff6ff,color:#1d4ed8,stroke:#bfdbfe
+    style K fill:#eff6ff,color:#1d4ed8,stroke:#bfdbfe
+        </div>
+      </div>
+
+      <div class="section-label">sourceMatch selection decision tree</div>
+      <p>How to pick the right anchor text from Domain B evidence for any claim type.</p>
+
+      <div class="diagram-wrap">
+        <div class="mermaid" id="anchor-flow">
+flowchart TD
+    A(["Start: evidence phrase to anchor"]) --> B{"Word count?"}
+    B -->|"1–4 words"| C{"Contiguous in\nsource text?"}
+    B -->|"5+ words"| D["Trim: drop leading quantifiers\nor qualifying clauses"]
+    D --> E{"Phrase type?"}
+    E -->|"Noun phrase"| F["Keep the noun head\n(2–3 words max)"]
+    E -->|"Mechanism / priority clause"| G["Keep the key verb or\ntier label (≤2 words)"]
+    E -->|"Definition body"| H["Use the defined term only\nnot the definition"]
+    E -->|"Tax / regulatory value"| I["Use the number or\nnamed test (1–3 words)"]
+    E -->|"Multi-value list"| J["Use first item\nor category label"]
+    F & G & H & I & J --> C
+    C -->|"No — phrase spans breaks or OCR artifacts"| K["Shorten further\nor pick a different phrase"]
+    K --> C
+    C -->|"Yes"| L{"Ctrl+F unique?"}
+    L -->|"No — too generic"| M["Try the noun head\nor a more distinctive term"]
+    M --> C
+    L -->|"Yes"| N{"sourceMatch reads\nnaturally as claimText in prose?"}
+    N -->|"Yes"| O["Format 1: **sourceMatch** [N]"]
+    N -->|"No"| P["Format 2: [claimText](cite:N 'sourceMatch')"]
+    O & P --> Q(["Write citation"])
+
+    style A fill:#6c6af6,color:#fff,stroke:none
+    style Q fill:#16a34a,color:#fff,stroke:none
+    style K fill:#fffbeb,color:#b45309,stroke:#fed7aa
+    style M fill:#fffbeb,color:#b45309,stroke:#fed7aa
+        </div>
+      </div>
+
+      <div class="section-label">Auth recovery sub-flow</div>
+      <p>The complete auth recovery decision tree triggered by "action needed" in any CLI output.</p>
+
+      <div class="diagram-wrap">
+        <div class="mermaid" id="auth-flow">
+flowchart TD
+    A(["CLI output contains\n'action needed'"]) --> B{"Is script\navailable?"}
+    B -->|"Yes"| C["script -q -c 'npx -y deepcitation@latest auth' /dev/null\n(timeout ≥180s — waits for human OAuth)"]
+    B -->|"No / DC_NON_INTERACTIVE=1"| D["Show manual key URL\nhttps://deepcitation.com/cli-auth?manual=true"]
+    D --> E["User pastes sk-dc-… key"]
+    E --> F["deepcitation auth --key '&lt;key&gt;'"]
+    C --> G{"Auth\nsucceeded?"}
+    F --> G
+    G -->|"Yes — credentials written"| H["Retry original prepare command\nexactly once"]
+    G -->|"No — all paths failed"| I(["Stop — show error verbatim"])
+    H --> J{"prepare OK\nthis time?"}
+    J -->|"Yes"| K(["Continue to Step 2"])
+    J -->|"No"| I
+
+    style A fill:#dc2626,color:#fff,stroke:none
+    style I fill:#dc2626,color:#fff,stroke:none
+    style K fill:#16a34a,color:#fff,stroke:none
+    style D fill:#eff6ff,color:#1d4ed8,stroke:#bfdbfe
+    style E fill:#eff6ff,color:#1d4ed8,stroke:#bfdbfe
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         TAB: INTEGRATION SDK
+    ══════════════════════════════════════════ -->
+    <div id="tab-integration" class="content-section">
+
+      <div class="section-label">What INTEGRATION.md covers</div>
+      <p>The SDK integration guide describes how an external developer embeds DeepCitation into their own application — server-side document prep, LLM prompt wrapping, citation verification, and client-side React rendering. It is structurally independent from the <span class="inline-code">/verify</span> CLI skill above.</p>
+
+      <!-- ── Full pipeline diagram ── -->
+      <div class="section-label" style="margin-top:28px;">Full integration pipeline</div>
+      <p>Every step the guide documents, including optional paths.</p>
+      <div class="diagram-wrap">
+        <div class="mermaid" id="integration-full">
+flowchart TD
+  subgraph S1["① Install & Setup"]
+    A["npm install deepcitation@latest"] --> B["Import styles\n(Tailwind or CSS)"]
+    B --> B2{"Using React\ncomponents?"}
+    B2 -->|"Yes"| B3["import deepcitation/styles.css\nor @import tailwind.css"]
+    B2 -->|"No"| C
+    B3 --> B4["Optional: DeepCitationTheme\nor --dc-* CSS tokens"]
+    B4 --> C
+    C["import types from 'deepcitation'\nnever define your own"] --> D["new DeepCitation({ apiKey })"]
+    D --> E{"Source type?"}
+    E -->|"File(s)"| F["prepareAttachments(files)\n→ attachmentId + deepTextPages"]
+    E -->|"URL"| G["prepareUrl({ url })\n→ attachmentId + deepTextPages"]
+    F --> H["Optional: configure\nproof image URLs\n(signed / workspace / public)"]
+    G --> H
+  end
+
+  subgraph S2["② Server Side"]
+    H --> I["wrapCitationPrompt({\n  systemPrompt, userPrompt,\n  deepTextPages\n})"]
+    I --> J["Call LLM with\nenhancedSystemPrompt +\nenhancedUserPrompt\n(OpenAI / Anthropic / Gemini)"]
+    J --> K{"Streaming?"}
+    K -->|"No"| L["Full response → llmOutput"]
+    K -->|"Yes"| M["Buffer chunks\nextractVisibleText(partial)\nfor live display"]
+    M --> N["Stream complete\n→ fullResponse"]
+    N --> L
+    L --> O{"Verify API?"}
+    O -->|"Simple (recommended)"| P["deepcitation.verify({ llmOutput })\n→ verifications"]
+    O -->|"Explicit (inspect/filter)"| Q["getAllCitationsFromLlmOutput()\n+ verifyAttachment(attachmentId, citations)\n→ verifications"]
+    P --> R["Optional: persist\nvisibleText + citations +\nverifications to DB"]
+    Q --> R
+  end
+
+  subgraph S3["③ Display"]
+    R --> S{"Display target?"}
+    S -->|"React (full response)"| T["parseCitationResponse(llmOutput)\n+ ReactMarkdown\n+ remarkCitationMarkers plugin\n+ CitationComponent per [N]"]
+    S -->|"Non-React"| U["replaceCitationMarkers(text,\n{ verifications, showVerificationStatus })"]
+    S -->|"Terminal"| V["renderCitationsForTerminal()"]
+    T --> W["Optional: CitationDrawer\nfor grouped source view"]
+    W --> X(["Rendered UI\nwith verified citations"])
+    U --> X
+    V --> X
+  end
+
+  style S1 fill:transparent,stroke:#c5c3ff,stroke-width:1.5px,color:#6c6af6
+  style S2 fill:transparent,stroke:#bfdbfe,stroke-width:1.5px,color:#2563eb
+  style S3 fill:transparent,stroke:#bbf7d0,stroke-width:1.5px,color:#16a34a
+  style X fill:#16a34a,color:#fff,stroke:none
+        </div>
+      </div>
+
+      <!-- ── Minimum viable vs full path ── -->
+      <div class="section-label" style="margin-top:32px;">Minimum viable path vs fully-loaded path</div>
+      <p>The guide documents every option, but the actual happy path is 5 logical steps. The table below maps every additional step to its purpose and whether it's genuinely required.</p>
+
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px;">
+        <table class="cost-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Step</th>
+              <th>Required?</th>
+              <th>Adds complexity</th>
+              <th>Skip cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-green">MVP</span></td>
+              <td><code>npm install deepcitation</code></td>
+              <td>Yes</td>
+              <td>Minimal</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">MVP</span></td>
+              <td><code>prepareAttachments()</code> → <code>attachmentId</code> + <code>deepTextPages</code></td>
+              <td>Yes</td>
+              <td>1 async call + file read</td>
+              <td>LLM has no evidence text to cite from</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">MVP</span></td>
+              <td><code>wrapCitationPrompt()</code> → enhanced prompts</td>
+              <td>Yes</td>
+              <td>1 sync call</td>
+              <td>LLM won't produce <code>CITATION_DATA</code> blocks</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">MVP</span></td>
+              <td>LLM call with enhanced prompts → <code>llmOutput</code></td>
+              <td>Yes</td>
+              <td>Your existing LLM call</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">MVP</span></td>
+              <td><code>deepcitation.verify({ llmOutput })</code> → <code>verifications</code></td>
+              <td>Yes (simple API)</td>
+              <td>1 async call</td>
+              <td>No verification results</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-neutral">opt</span></td>
+              <td>Import styles / <code>DeepCitationTheme</code></td>
+              <td>Only if using React components</td>
+              <td>1 import line</td>
+              <td>Components render unstyled</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-neutral">opt</span></td>
+              <td>CSS token overrides (<code>--dc-*</code>)</td>
+              <td>No</td>
+              <td>CSS only, zero runtime cost</td>
+              <td>Default brand colors</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-neutral">opt</span></td>
+              <td>Explicit API: <code>getAllCitationsFromLlmOutput()</code> + <code>verifyAttachment()</code></td>
+              <td>No — only when filtering citations</td>
+              <td>2 calls instead of 1; exposes <code>CitationRecord</code></td>
+              <td>Can't inspect/filter before verify</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-neutral">opt</span></td>
+              <td>Proof image config (<code>proofConfig</code>)</td>
+              <td>No — default is base64</td>
+              <td>Extra verify options object</td>
+              <td>base64 in response payload (larger); no CDN URLs</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-neutral">opt</span></td>
+              <td>Streaming: buffer + <code>extractVisibleText(partial)</code> live</td>
+              <td>No — only for streaming UX</td>
+              <td>Chunk accumulator loop; defer verify to end</td>
+              <td>No progressive text display during generation</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-neutral">opt</span></td>
+              <td>Persist to DB (<code>visibleText + citations + verifications</code>)</td>
+              <td>No</td>
+              <td>DB write + read path</td>
+              <td>Re-verify on every load (API cost + latency)</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-neutral">opt</span></td>
+              <td><code>remarkCitationMarkers</code> remark plugin</td>
+              <td>Only for React + markdown formatting</td>
+              <td>~20 lines boilerplate; custom AST node</td>
+              <td>Markdown formatting breaks across citation markers</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-neutral">opt</span></td>
+              <td><code>CitationDrawer</code> grouped source view</td>
+              <td>No</td>
+              <td>2 components + state</td>
+              <td>No summary panel; only inline chips</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Complexity comparison diagram ── -->
+      <div class="section-label" style="margin-top:8px;">Minimum viable vs fully-loaded — step count</div>
+      <div class="diagram-wrap">
+        <div class="mermaid" id="complexity-compare">
+graph LR
+  subgraph MVP["Minimum viable path — 5 steps"]
+    direction LR
+    m1["prepare\nattachments"] --> m2["wrap\nprompt"] --> m3["LLM\ncall"] --> m4["verify\nsimple API"] --> m5["display\nvisibleText"]
+  end
+
+  subgraph FULL["Fully-loaded path — 13 steps"]
+    direction LR
+    f1["install +\nimport styles"] --> f2["theme\ntokens"] --> f3["init\nclient"] --> f4["prepare\nattachments"] --> f5["wrap\nprompt"] --> f6["LLM stream\n+ buffer"] --> f7["live display\npartial text"] --> f8["parse\ncitations"] --> f9["verify\nexplicit API\n+ proofConfig"] --> f10["persist\nto DB"] --> f11["ReactMarkdown\n+ remark\nplugin"] --> f12["CitationComponent\nper marker"] --> f13["CitationDrawer\ngrouped view"]
+  end
+
+  style MVP fill:transparent,stroke:#bbf7d0,color:#16a34a,stroke-width:2px
+  style FULL fill:transparent,stroke:#fecaca,color:#dc2626,stroke-width:2px
+        </div>
+      </div>
+
+      <!-- ── What could be better ── -->
+      <div class="section-label" style="margin-top:8px;">Complexity analysis — what could be better</div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon red">🔴</div>
+          <div class="card-title-group">
+            <div class="card-title">The remark plugin is boilerplate every consumer must copy</div>
+            <div class="card-desc">~20 lines of unist-util-visit AST manipulation to replace [N] markers inline</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <p style="margin-top:12px;">Every React integration must reproduce the <code class="inline-code">remarkCitationMarkers</code> plugin verbatim. The plugin itself isn't complicated, but it requires knowledge of the unist AST, <code class="inline-code">unist-util-visit</code>, and React-Markdown's custom component injection. It is copy-paste infrastructure with no room for error.</p>
+          <div class="improvement-box">
+            <strong>Optimal path:</strong> Export <code>remarkCitationMarkers</code> directly from <code>deepcitation/react</code> — consumers import it in one line instead of copying 20. This also means any future AST fix is deployed once. The recipe in the doc could shrink to 3 lines: import the plugin, pass it to <code>remarkPlugins</code>, and render.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon yellow">🟡</div>
+          <div class="card-title-group">
+            <div class="card-title">Two verify APIs with overlapping surface</div>
+            <div class="card-desc">Simple API (verify) vs explicit API (getAllCitations + verifyAttachment) — the distinction isn't immediately obvious</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <p style="margin-top:12px;">The simple API (<code class="inline-code">deepcitation.verify({ llmOutput })</code>) is documented after the explicit API in Section 2.3, even though it's labeled "recommended". Readers who land mid-document may implement the explicit path unnecessarily.</p>
+          <div class="detail-grid" style="margin-top:12px;">
+            <div class="detail-cell">
+              <div class="detail-cell-label">Simple API</div>
+              <div class="detail-cell-value">1 call. Pass <code>llmOutput</code> directly. Internal parsing handled. Use for 90% of cases.</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">Explicit API</div>
+              <div class="detail-cell-value">3 calls: parse → inspect/filter → <code>verifyAttachment</code>. Only needed when you must filter citations before verification.</div>
+            </div>
+          </div>
+          <div class="improvement-box" style="margin-top:12px;">
+            <strong>Optimal path:</strong> Lead with the simple API. Put explicit API in a collapsible "Advanced: filtering citations" subsection so the happy path is immediately visible.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon yellow">🟡</div>
+          <div class="card-title-group">
+            <div class="card-title">attachmentId 24-hour TTL buried in Appendix D</div>
+            <div class="card-desc">Production-critical constraint not surfaced near prepareAttachments</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <p style="margin-top:12px;">The fact that <code class="inline-code">attachmentId</code> values expire after 24 hours and must be cached is noted only in Appendix D under a "Production note" callout. A developer following the main flow wouldn't see this until they hit expiry errors in production.</p>
+          <div class="improvement-box">
+            <strong>Optimal path:</strong> Add a ⚠️ callout directly in Section 1.4 (Prepare Sources): "Cache <code>attachmentId</code> — valid for 24 hours. Re-upload to refresh."
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon green">🟢</div>
+          <div class="card-title-group">
+            <div class="card-title">Golden Rules + Common Mistakes table — well placed</div>
+            <div class="card-desc">The upfront rules prevent the most common mistakes before they happen</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <p style="margin-top:12px;">The "Golden Rules" section at the top — especially the Wrong/Correct table — is an effective progressive disclosure pattern. It front-loads the most commonly-violated rules (<code class="inline-code">citations.length</code>, raw <code class="inline-code">llmOutput</code> to users, custom type definitions) before the developer writes a single line of code.</p>
+          <div class="insight-box">
+            <strong>What works:</strong> The binary Wrong/Correct format removes ambiguity. Developers scanning for "how do I check if there are citations?" find the answer in 2 seconds without reading prose. The Quick Reference recipes immediately below serve the same function for full patterns.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-icon blue">🔵</div>
+          <div class="card-title-group">
+            <div class="card-title">Streaming pattern requires implicit knowledge</div>
+            <div class="card-desc">Buffer-until-end behavior for CITATION_DATA is a non-obvious constraint</div>
+          </div>
+          <svg class="card-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="card-body">
+          <p style="margin-top:12px;">Section 3.3 explains that the <code class="inline-code">&lt;&lt;&lt;CITATION_DATA&gt;&gt;&gt;</code> block always arrives at the end of the stream — which is why you must buffer the full response before parsing citations. This is a fundamental constraint that shapes the entire streaming integration pattern.</p>
+          <div class="detail-grid" style="margin-top:12px;">
+            <div class="detail-cell">
+              <div class="detail-cell-label">During stream</div>
+              <div class="detail-cell-value"><code>extractVisibleText(partial)</code> safely strips any partial <code>CITATION_DATA</code> appearing mid-buffer for live display</div>
+            </div>
+            <div class="detail-cell">
+              <div class="detail-cell-label">After stream ends</div>
+              <div class="detail-cell-value">Parse full response with <code>getAllCitationsFromLlmOutput(fullResponse)</code>, then verify, then re-render with <code>CitationComponent</code></div>
+            </div>
+          </div>
+          <div class="improvement-box" style="margin-top:12px;">
+            <strong>Optimal path:</strong> A single diagram showing "citation data is appended at end of stream" would make the two-phase pattern (live text display → post-stream verify) immediately clear. Currently requires reading 3.3 carefully to understand why buffering is necessary.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Decision flow: which API path ── -->
+      <div class="section-label" style="margin-top:28px;">Decision flow — choosing the right integration path</div>
+      <div class="diagram-wrap">
+        <div class="mermaid" id="integration-decisions">
+flowchart TD
+  A(["Start: integrate DeepCitation"]) --> B{"Need React\ncitation chips?"}
+  B -->|"Yes"| C["Import deepcitation/styles.css\nor @import tailwind.css"]
+  B -->|"No"| D
+
+  C --> C2{"Custom\nbrand colors?"}
+  C2 -->|"Yes"| C3["Add --dc-* CSS tokens\nor DeepCitationTheme component"]
+  C2 -->|"No"| D
+  C3 --> D
+
+  D["prepareAttachments() or prepareUrl()\n→ save attachmentId (24h TTL!)"] --> E["wrapCitationPrompt()\n→ enhancedSystemPrompt +\nenhancedUserPrompt"]
+
+  E --> F{"Streaming\nLLM response?"}
+  F -->|"Yes"| G["Accumulate chunks\nextractVisibleText(partial) for live display\nDefer verify until stream ends"]
+  F -->|"No"| H
+
+  G --> H["Full llmOutput available"]
+
+  H --> I{"Need to inspect\nor filter citations\nbefore verifying?"}
+  I -->|"No — typical case"| J["deepcitation.verify({ llmOutput })\n✓ Simple API — 1 call"]
+  I -->|"Yes — advanced"| K["getAllCitationsFromLlmOutput()\nfilter CitationRecord\nverifyAttachment(attachmentId, filtered)"]
+
+  J --> L{"Production?\nNeed proof images?"}
+  K --> L
+
+  L -->|"Yes"| M["Add proofConfig:\n{ access: 'signed', signedUrlExpiry: '7d' }"]
+  L -->|"No"| N
+  M --> N["extractVisibleText(llmOutput)"]
+
+  N --> O{"Persist to DB?"}
+  O -->|"Yes"| P["Store visibleText +\ncitations + verifications\nServe to client without re-verify"]
+  O -->|"No"| Q
+
+  P --> Q{"Display target?"}
+  Q -->|"React + markdown"| R["parseCitationResponse()\n+ ReactMarkdown\n+ remarkCitationMarkers plugin\n+ CitationComponent per marker"]
+  Q -->|"React, plain text"| S["CitationComponent\nwith manual marker replacement"]
+  Q -->|"Non-React"| T["replaceCitationMarkers()\nwith showVerificationStatus: true"]
+  Q -->|"Terminal / CLI"| U["renderCitationsForTerminal()"]
+
+  R --> V{"Show grouped\nsource drawer?"}
+  V -->|"Yes"| W["CitationDrawer +\nCitationDrawerTrigger +\ngroupCitationsBySource()"]
+  V -->|"No"| X
+  W --> X(["Done — citations\nrendered with\nverification status"])
+  S --> X
+  T --> X
+  U --> X
+
+  style A fill:#6c6af6,color:#fff,stroke:none
+  style X fill:#16a34a,color:#fff,stroke:none
+  style J fill:#f0fdf4,color:#166534,stroke:#bbf7d0
+  style K fill:#fffbeb,color:#92400e,stroke:#fed7aa
+        </div>
+      </div>
+
+      <!-- ── Step count comparison ── -->
+      <div class="section-label" style="margin-top:8px;">Actual step counts by scenario</div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px;">
+        <table class="cost-table">
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>API calls</th>
+              <th>Decisions</th>
+              <th>Lines of code (approx)</th>
+              <th>Complexity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Non-streaming, simple verify, plain text output</td>
+              <td>2 (prepare + verify)</td>
+              <td>1 (streaming?)</td>
+              <td>~20</td>
+              <td><span class="badge badge-green">Low</span></td>
+            </tr>
+            <tr>
+              <td>Non-streaming, simple verify, React + CitationComponent</td>
+              <td>2</td>
+              <td>2</td>
+              <td>~50</td>
+              <td><span class="badge badge-green">Low</span></td>
+            </tr>
+            <tr>
+              <td>Streaming, simple verify, React + CitationComponent</td>
+              <td>2</td>
+              <td>3</td>
+              <td>~80</td>
+              <td><span class="badge badge-yellow">Medium</span></td>
+            </tr>
+            <tr>
+              <td>Streaming, explicit verify + proofConfig, React + remark plugin + CitationDrawer</td>
+              <td>3 (prepare + verifyAttachment + proofUrls)</td>
+              <td>5</td>
+              <td>~150</td>
+              <td><span class="badge badge-red">High</span></td>
+            </tr>
+            <tr>
+              <td>Full production: streaming + explicit verify + proofConfig + DB persistence + CitationDrawer</td>
+              <td>3+</td>
+              <td>7</td>
+              <td>~200+</td>
+              <td><span class="badge badge-red">High</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Key type invariants ── -->
+      <div class="section-label" style="margin-top:8px;">Type invariants — the most common bugs</div>
+      <div class="detail-grid" style="margin-bottom:24px;">
+        <div class="detail-cell">
+          <div class="detail-cell-label">CitationRecord is NOT an array</div>
+          <div class="detail-cell-value"><code>Record&lt;string, Citation&gt;</code> — keyed by 16-char hash. Use <code>Object.keys(citations).length</code>, never <code>citations.length</code>.</div>
+        </div>
+        <div class="detail-cell">
+          <div class="detail-cell-label">Never define your own types</div>
+          <div class="detail-cell-value">Import <code>Citation</code>, <code>Verification</code>, <code>CitationRecord</code>, <code>VerificationRecord</code> from <code>deepcitation</code>. Custom definitions diverge silently.</div>
+        </div>
+        <div class="detail-cell">
+          <div class="detail-cell-label">Always strip before display</div>
+          <div class="detail-cell-value"><code>extractVisibleText(llmOutput)</code> before any user-facing render. Raw output contains <code>&lt;&lt;&lt;CITATION_DATA&gt;&gt;&gt;</code> blocks.</div>
+        </div>
+        <div class="detail-cell">
+          <div class="detail-cell-label">getCitationStatus() for status checks</div>
+          <div class="detail-cell-value">Never compare <code>v.status === "found"</code> directly — the status value table has 9 variants. Use <code>getCitationStatus(v).isVerified</code>.</div>
+        </div>
+        <div class="detail-cell">
+          <div class="detail-cell-label">attachmentId TTL</div>
+          <div class="detail-cell-value">Valid for 24 hours. Cache after <code>prepareAttachments()</code>. Re-upload to refresh.</div>
+        </div>
+        <div class="detail-cell">
+          <div class="detail-cell-label">citationKey bridge</div>
+          <div class="detail-cell-value">The same 16-char hash indexes both <code>CitationRecord</code> and <code>VerificationRecord</code>. Use <code>getCitationKey(citation)</code> — never compute manually.</div>
+        </div>
+      </div>
+
+    </div><!-- #tab-integration -->
+
+  </div><!-- .main -->
+</div><!-- .app -->
+
+<script>
+  // ── Mermaid init ──
+  const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+
+  function initMermaid() {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: isDark() ? 'dark' : 'neutral',
+      themeVariables: isDark() ? {
+        primaryColor: '#1a1936',
+        primaryTextColor: '#e8e8e3',
+        primaryBorderColor: '#3d3b8a',
+        lineColor: '#6b6b6b',
+        secondaryColor: '#232320',
+        tertiaryColor: '#1a1a18',
+        background: '#111110',
+        mainBkg: '#1a1936',
+        nodeBorder: '#3d3b8a',
+        clusterBkg: '#232320',
+        titleColor: '#e8e8e3',
+        edgeLabelBackground: '#1a1a18',
+        fontFamily: 'Inter, -apple-system, sans-serif',
+        fontSize: '13px'
+      } : {
+        primaryColor: '#f0efff',
+        primaryTextColor: '#1a1a1a',
+        primaryBorderColor: '#c5c3ff',
+        lineColor: '#9b9b9b',
+        secondaryColor: '#f7f7f5',
+        tertiaryColor: '#efefed',
+        background: '#ffffff',
+        mainBkg: '#f0efff',
+        nodeBorder: '#c5c3ff',
+        clusterBkg: '#f7f7f5',
+        titleColor: '#1a1a1a',
+        edgeLabelBackground: '#f7f7f5',
+        fontFamily: 'Inter, -apple-system, sans-serif',
+        fontSize: '13px'
+      }
+    });
+  }
+
+  async function renderAllDiagrams() {
+    const els = document.querySelectorAll('.mermaid');
+    for (const el of els) {
+      const src = el.textContent.trim();
+      if (!src || el.dataset.rendered) continue;
+      try {
+        const id = el.id || 'mermaid-' + Math.random().toString(36).slice(2);
+        el.id = id;
+        const { svg } = await mermaid.render('render-' + id, src);
+        el.innerHTML = svg;
+        el.dataset.rendered = 'true';
+      } catch(e) {
+        console.warn('Mermaid render error:', e);
+      }
+    }
+  }
+
+  initMermaid();
+  document.addEventListener('DOMContentLoaded', renderAllDiagrams);
+
+  // ── Tab switching ──
+  function showTab(name) {
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('visible'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+
+    const section = document.getElementById('tab-' + name);
+    if (section) section.classList.add('visible');
+
+    document.querySelectorAll('.tab').forEach(t => {
+      if (t.getAttribute('onclick')?.includes(name)) t.classList.add('active');
+    });
+    document.querySelectorAll('.sidebar-item').forEach(s => {
+      if (s.getAttribute('onclick')?.includes(name)) s.classList.add('active');
+    });
+
+    // Render diagrams in newly visible tab
+    setTimeout(renderAllDiagrams, 50);
+    return false;
+  }
+
+  // ── Card expand/collapse ──
+  function toggleCard(header) {
+    const card = header.closest('.card');
+    card.classList.toggle('open');
+  }
+
+  // ── Theme toggle ──
+  function toggleTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
+    document.getElementById('theme-label').textContent = next === 'dark' ? 'Light mode' : 'Dark mode';
+
+    // Re-render diagrams with new theme
+    document.querySelectorAll('.mermaid').forEach(el => { delete el.dataset.rendered; });
+    initMermaid();
+    setTimeout(renderAllDiagrams, 100);
+  }
+
+  // Auto-detect system dark mode
+  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('theme-icon').textContent = '☀️';
+    document.getElementById('theme-label').textContent = 'Light mode';
+  }
+
+  // Re-init and render after full load
+  window.addEventListener('load', () => {
+    initMermaid();
+    renderAllDiagrams();
+  });
+</script>
+</body>
+</html>
