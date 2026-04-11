@@ -88,7 +88,7 @@ mechanism — having evidence text in context (even repeated) improves citation 
 ## 2. Respond with citations
 
 > **Citation rules reference**: All anchor text, display label, and citation data field rules are defined in
-> `docs/agents/deep-citation-standards.md` (§1–§4 and §9 UX contract). This skill owns the *authoring
+> `docs/deep-citation-standards.md` (§1–§4 and §9 UX contract). This skill owns the *authoring
 > heuristics* — how to pick the right anchor in-flow — and references the standards for the hard rules.
 > When the two disagree, the standards doc wins.
 
@@ -96,33 +96,52 @@ Your response IS the verification report. Write body text with citation markers,
 
 Use **standard markdown only** — no raw HTML tags.
 
-### Progressive disclosure
+### Progressive disclosure — the scan-anchor chain
 
-The reader experiences citations in three layers — each adds detail:
+Users scan, they don't read (see `docs/agents/concepts.md`). Each view state has one scan anchor; shorter and terser anchors make every state work better:
 
-1. **Scan** — they skim the bolded terms to grasp the key facts. The bold text IS the verbatim source phrase — 1–4 exact words from the evidence.
-2. **Highlight** — they click the bold term and see THOSE SAME WORDS highlighted in yellow in the evidence popover. The popover shows the full evidence paragraph (from `l` line IDs) with the anchor (`k`) highlighted in amber within it. If `k` = the entire paragraph, **no highlight is shown** — the anchor drowns in its own context.
-3. **Explore** — the keyhole strip shows the anchor region in the original PDF image at readable size. Short anchors (1–4 words) stay crisp; very long anchors spread across the image and may lose readability.
+1. **`preview`** — the reader skims `claimText` (bolded terms) with a `verificationBadge` beside each. Terse `claimText` = clean scan target that doesn't dominate the sentence.
+2. **`focusPopover`** — clicking `claimText` shows `sourceContext` with `sourceMatch` highlighted in amber. The `keyholeViewport` is pre-centered on `sourceMatch`. Terse `sourceMatch` = tight keyhole framing, instant confirmation. If `sourceMatch` = the entire paragraph, **no highlight is shown** — the anchor drowns in its own context.
+3. **`pageView`** — the `spotlight` dims everything outside `sourceContext`, and `contextBrackets` frame the target. Terse `sourceMatch` = tight `spotlight` region, readable at a glance.
 
-**Hard rules** (see `docs/agents/deep-citation-standards.md` §1 for the canonical list):
-1. **Connection**: bold text and `k` must be identical. The reader clicks the bold term and sees those exact words highlighted.
-2. **Brevity**: bold text and `k` must be **≤4 words, ≤40 chars** — HARD LIMIT. Truncate longer evidence phrases per §2 of the standards doc.
-3. **Context**: `l` must include the anchor's line PLUS 1–2 adjacent lines, so the evidence paragraph is longer than the anchor.
-4. **Verbatim**: `k` must be a contiguous substring of the evidence — never a paraphrase, never with ellipsis.
+**Why shorter is safer, lighter, and more flexible:**
+- **Safer**: Fewer words to match = fewer chances for OCR fragmentation, line breaks, or whitespace to break the search
+- **Lighter**: A terse `claimText` reads naturally in prose — the bold term is a scan anchor, not a quote
+- **More flexible**: When `claimText` is terse, existing prose doesn't need to be rewritten around it
 
-**Per-citation SELF-CHECK — run this in your head before AND after writing each bold term:**
-1. **Before writing**: decide the anchor phrase first. Count the words silently: "1 – 2 – 3 – 4". If you reach 5, stop — do NOT type the `**`. Drop the leading quantifier or filler adjective and recount.
-2. **Drop the leading quantifier or filler adjective.** "six ground floor commercial units" (5w) → drop "six" → **ground floor commercial** (3w). "fifty-nine interior underground parking units" (5w) → drop "fifty-nine interior" → **underground parking units** (3w). Numbers and size modifiers are almost never the distinctive part — the noun phrase is.
-3. **After writing** `**bold term**`: count the words again. If the count is 5 or more, **stop immediately**, delete the bold term, and rewrite with ≤4 words before moving to the next sentence. Do not continue until this citation passes.
-4. **Ask: could a reader ctrl+F this and find it uniquely?** If yes and it's ≤4 words, proceed. If it takes 5+ words to be unique, you're probably grabbing too much context — pick the noun head, not the whole phrase.
+**Hard rules** (see `docs/deep-citation-standards.md` §1 for the canonical list):
+1. **Connection**: In Format 1, `claimText` (bold text) and `k` (`sourceMatch`) are identical. In Format 2, `claimText` is a short prose label and `k` is the verbatim source term — both must be terse, but they serve different roles.
+2. **Brevity**: `sourceMatch` (`k`) must be **≤4 words, ≤40 chars**. Truncate longer evidence phrases per §2 of the standards doc.
+3. **Context**: `l` must include the `sourceMatch` line PLUS 1–2 adjacent lines, so `sourceContext` is longer than `sourceMatch`.
+4. **Verbatim**: `k` must be a contiguous substring of `sourceContext` — never a paraphrase, never with ellipsis.
 
-### In-text markers
+**Per-citation SELF-CHECK — run this in your head before AND after writing each citation:**
+1. **Pick `sourceMatch` first** — the terse verbatim phrase from the source (Domain B). Shorter is safer: 1–2 words is ideal, 3–4 is acceptable. If you're at 5+, you're grabbing context that belongs in prose, not in the anchor. Drop the leading quantifier or filler adjective.
+   - "six ground floor commercial units" → **ground floor commercial** (3w) — drop the number
+   - "fifty-nine interior underground parking units" → **underground parking** (2w) — drop the count and modifier
+2. **Decide the format.** If `sourceMatch` reads naturally as `claimText` in the prose → Format 1 (`**sourceMatch** [N]`). If the prose already has its own phrasing, or the source term doesn't read naturally → Format 2 (`[claimText](cite:N 'sourceMatch')`).
+3. **After writing**: recount `sourceMatch` words. If 5+, stop and shorten before moving on.
+4. **Ctrl+F test**: could a reader search for this `sourceMatch` and find it uniquely in the source? If yes, proceed. If it takes 5+ words to be unique, pick the noun head, not the whole phrase.
 
-**Bold** 1–4 verbatim words from the evidence. The bold text must appear verbatim in the source — but you pick only the shortest distinctive substring (≤4 words), not the full phrase. Place `[N]` immediately after. One unique ID per distinct fact.
+### In-text markers — Domain A (`claimText`) and Domain B (`sourceMatch`)
+
+Every citation connects two documents (see `docs/agents/concepts.md`):
+- **Domain A** — the asserting document (your report). The `claimText` is what the reader sees bolded or linked.
+- **Domain B** — the authoritative document (the evidence). The `sourceMatch` (`k`) is the verbatim phrase that the search locates and the `keyholeViewport` frames.
+
+**Format 1** — when `sourceMatch` reads naturally as `claimText`:
+Bold the `sourceMatch` directly. `claimText === sourceMatch` (`isVerbatim` = true). Place `[N]` after.
 
 Example: The invoice totals **USD 4,350.00** [1] for services rendered by **Acme Corp** [2] on **March 15, 2024** [3].
 
-**How to truncate long evidence phrases to ≤4 words** (canonical strategy is in `docs/agents/deep-citation-standards.md` §2). A few worked examples for in-flow reference:
+**Format 2** — when the prose already has its own voice, or the source term doesn't fit:
+Use `[claimText](cite:N 'sourceMatch')`. The `claimText` stays in Domain A's voice; the `sourceMatch` is independently chosen from Domain B.
+
+Example: The company's [revenue grew](cite:1 '$4.2 million') over the prior year, with [dissolution protections](cite:2 'Dissolution Event') for minority holders.
+
+**Default to the tersest `sourceMatch` that uniquely identifies the evidence.** Then decide whether that same phrase works as `claimText` (Format 1) or whether the prose needs its own phrasing (Format 2). One unique ID per distinct fact.
+
+**How to truncate long `sourceContext` phrases to a terse `sourceMatch`** (canonical strategy is in `docs/deep-citation-standards.md` §2). A few worked examples for in-flow reference:
 
 *Quantifier-drop (noun phrases):*
 - "Junior to payment of outstanding indebtedness and creditor claims" → **outstanding indebtedness** (2w)
@@ -134,9 +153,19 @@ Example: The invoice totals **USD 4,350.00** [1] for services rendered by **Acme
 - "will automatically convert into the number of shares of Safe Preferred Stock" → **automatically convert** (2w) [cite the trigger verb]
 - "Investor will automatically be entitled to receive a portion of Proceeds" → **entitled to receive** (3w) [drop subject and object]
 - "On par with payments for other Safes and/or Preferred Stock" → **On par with** (3w) [tier marker is the claim; the list of co-equal holders is context]
-- "Senior to payments for Common Stock" → **Senior to** (2w) [same: the priority label is the claim]
+- "Senior to payments for Common Stock" → **Senior to** (2w) [same: the priority label is the claim — do NOT quote "for Common Stock"]
+- "junior to payments described in clauses (i) and (ii) above" → **Junior to** (2w) [priority label only]
 - "the applicable Proceeds will be distributed pro rata to the Investor" → **pro rata** (2w) [the distribution principle, not the full rule]
 - "immediately following the earliest to occur of: (i) the issuance of Capital Stock" → **earliest to occur** (3w) or **Capital Stock** (2w)
+
+*Formula, definition, and enumeration (cite the result or term, NOT the formula body or definition):*
+- "Purchase Amount divided by the Discount Price" → **Discount Price** (2w) [cite the result/key term, not the formula — the formula is context]
+- "Discount Price means the lowest price per share of Standard Preferred Stock" → **Discount Price** (2w) [cite the defined term, not the definition body]
+- "Safe Price means the price per share equal to the Post-Money Valuation Cap divided by the Company Capitalization" → **Safe Price** (2w) [same: term, not definition]
+- "Sections 304, 305, 306, 354, 368, 1036 and 1202 of the Internal Revenue Code" → **Section 304** (2w) or **IRC sections** (2w) [multi-value list: cite the first item or a category label; never quote the whole list]
+- "pursuant to Sections 83(b), 422 and 423 of the Code" → **Section 83(b)** (2w) [first IRC section]
+
+Common trap for formulas and definitions: the full formula phrase ("Purchase Amount divided by the Discount Price") feels load-bearing because every word seems necessary. It's not — only the *result term* (the named quantity the clause defines) is the citable fact. The formula body is prose context that belongs outside the anchor.
 
 Pick the 2–3 words that a reader would recognize as the key term — the noun, the distinctive verb trigger, or the priority tier label. For mechanism clauses, the verb phrase (≤2 words) is usually the correct anchor, not the full operative sentence.
 
@@ -173,19 +202,22 @@ For tax/regulatory text: dollar amounts, percentages, and named legal tests are 
 
 ### Citation data block
 
-After the body text, append a `<<<CITATION_DATA>>>` block. Field definitions (`n`, `k`, `p`, `l`) are in `docs/agents/deep-citation-standards.md` §4. Two critical reminders:
+After the body text, append a `<<<CITATION_DATA>>>` block. Field definitions are in `docs/deep-citation-standards.md` §4. Critical reminders:
 
-- **`k` must equal the bold text exactly** — they are the same 1–4 verbatim words from the evidence.
-- **`p` format is `"pageNumber_arrayIndex"`** — e.g. `"1_0"` (page 1, index 0). Use the `<page_number_N_index_I>` tag values from the prepare output.
-- **`l` must include the anchor's line plus 1–2 adjacent lines** (e.g. `[19, 20, 21]`) so the evidence paragraph gives the highlight visible context.
+- **`k` / `anchorText`** (Domain B) — the verbatim short anchor from the source. ≤4 words, ≤40 chars. In Format 1, `k` equals the bold `claimText`. In Format 2, `k` is the verbatim source term.
+- **`f` / `fullPhrase`** — copy 1–2 verbatim sentences from the source that contain the anchor. Must be significantly longer than `k` — it provides the highlight context. Use proper JSON escaping for quotes.
+- **`p` / `pageId` format is `"page_number_N_index_I"`** — e.g. `"page_number_1_index_0"` (page 1, array index 0). Derive from the array position: page 1 = index 0, page 2 = index 1, etc. Format: `page_number_{1-indexed page number}_index_{0-indexed array position}`.
+- **`l` / `lineIds`** — line IDs of the anchor's location. **`lineIds` are sparse** — not every line is tagged. Use the nearest `<line id="N">` tag visible in the prepare output. Include the anchor line plus 1–2 adjacent tagged neighbors for context.
+
+Shorthand keys: `n`=id, `r`=reasoning, `f`=fullPhrase, `k`=anchorText, `p`=pageId, `l`=lineIds
 
 ```
 <<<CITATION_DATA>>>
 {
   "ATTACHMENT_ID": [
-    {"n": 1, "k": "USD 4,350.00", "p": "1_0", "l": [13, 14, 15]},
-    {"n": 2, "k": "Acme Corp", "p": "1_0", "l": [2, 3, 4]},
-    {"n": 3, "k": "March 15, 2024", "p": "1_0", "l": [4, 5, 6]}
+    {"n": 1, "r": "states the invoice total", "f": "The invoice totals USD 4,350.00 for services rendered by Acme Corp", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]},
+    {"n": 2, "r": "names the service provider", "f": "services rendered by Acme Corp on March 15, 2024 per the attached agreement", "k": "Acme Corp", "p": "page_number_1_index_0", "l": [2, 3, 4]},
+    {"n": 3, "r": "states the service date", "f": "Acme Corp on March 15, 2024 per the attached agreement", "k": "March 15, 2024", "p": "page_number_1_index_0", "l": [4, 5, 6]}
   ]
 }
 <<<END_CITATION_DATA>>>
@@ -193,17 +225,17 @@ After the body text, append a `<<<CITATION_DATA>>>` block. Field definitions (`n
 
 Use the `attachmentId` from the prepare output as the group key.
 
-**Four failure modes** — each row shows the trap, the fix, and the lesson. The trap is what the model naturally writes under pressure; the fix is what passes Test 4.
+**Common failure modes** — the trap is what the model naturally writes; the fix shows how terse `sourceMatch` values work better.
 
 | Trap (✗) | Fix (✓) | Why |
 |---|---|---|
-| bold = `**Junior to payment of outstanding indebtedness**` (6w) | bold = `**outstanding indebtedness**` (2w) | The distinctive noun carries the claim — quantifiers and prepositions are filler. Count words; 5+ is always wrong. |
-| bold = `**Equity Financing**`, k = `"when the company raises capital"` | bold = `**Equity Financing**`, k = `"Equity Financing"` | Bold and `k` must be the **same characters**, not synonyms. The reader clicks the bold term expecting to see *those exact words* highlighted in the popover. |
-| bold = `**Tooth Numbers 3 9 14 19 24 30**` (7w) | bold = `**Tooth Numbers**` (2w) | Multi-value fields: cite **one** anchor, not the whole row. The list is the claim context; the header is the citable term. |
-| bold = `**earliest to occur...prior to**` (4w with ellipsis) | bold = `**earliest to occur**` (3w) | Never use `...` in an anchor. `k` must be a contiguous substring — if you need two pieces, they are two citations, not one. |
-| bold = `**first 5 years of employment**` (5w) | bold = `**5 years**` (2w) | Tax/regulatory clauses: cite the threshold or limit, drop the qualifying prepositional phrase. "first" and "of employment" are prose context. Prose: `within the first **5 years** [3] of employment`. |
-| bold = `**30% of the adjustable taxable income**` (6w) | bold = `**adjustable taxable income**` (3w) | Same pattern: cite the distinctive noun phrase, not the full clause with its leading percentage. Prose: `capped at 30% of **adjustable taxable income** [5]`. |
-| bold = `**limited by the person's age**` (5w) | bold = `**person's age**` (2w) | Participial filler ("limited by the") is prose, not anchor. The noun head is the citable term. Prose: `the deduction is limited by the **person's age** [7]`. |
+| `sourceMatch` = `"Junior to payment of outstanding indebtedness"` (6w) | `sourceMatch` = `"outstanding indebtedness"` (2w) | The distinctive noun carries the claim — quantifiers and prepositions are filler. Shorter `sourceMatch` = tighter `keyholeViewport`. |
+| `claimText` = `**Equity Financing**`, `k` = `"when the company raises capital"` | `claimText` = `**Equity Financing**`, `k` = `"Equity Financing"` (Format 1) | `k` is `sourceMatch` — verbatim Domain B text. The reader clicks `claimText` and sees `sourceMatch` highlighted in the `focusPopover`. They must be connected. |
+| `sourceMatch` = `"Tooth Numbers 3 9 14 19 24 30"` (7w) | `sourceMatch` = `"Tooth Numbers"` (2w) | Multi-value fields: cite **one** value. The list is `sourceContext`; the header is the citable `sourceMatch`. |
+| `sourceMatch` = `"earliest to occur...prior to"` (ellipsis) | `sourceMatch` = `"earliest to occur"` (3w) | Never use `...` — `sourceMatch` must be a contiguous substring of `sourceContext`. Two pieces = two citations. |
+| `sourceMatch` = `"first 5 years of employment"` (5w) | `sourceMatch` = `"5 years"` (2w) | Cite the threshold, drop the qualifying phrase. Prose carries the rest: `within the first **5 years** [3] of employment`. |
+| `sourceMatch` = `"30% of the adjustable taxable income"` (6w) | `sourceMatch` = `"adjustable taxable income"` (3w) | Cite the distinctive noun, not the full clause. Prose: `capped at 30% of **adjustable taxable income** [5]`. |
+| Existing prose says "the person's age limits deductions" but source says "age of the individual" | Format 2: `[person's age](cite:7 'age of the individual')` | `claimText` uses Domain A's voice, `sourceMatch` uses Domain B's exact words. Neither needs to contort. |
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
@@ -216,8 +248,12 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the prepare output (copy it in full)
-- Citation format: **bold** 1–4 verbatim words from the evidence — the exact source phrase. Place `[N]` after each bolded term. **`k` in CITATION_DATA must equal the bold text exactly** — they are the same verbatim phrase. The reader clicks the bold term and sees those same words highlighted. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].` After the body, append a `<<<CITATION_DATA>>>` block with `n` (citation id), `k` (must equal bold text — 1–4 verbatim words, NEVER more than 4, NEVER a paraphrase), `p` (page id as `"N_I"` from `<page_number_N_index_I>`), `l` (line id array — include the anchor's line PLUS 1–2 adjacent lines for context, e.g. `[19, 20, 21]`). One unique ID per distinct fact. **Do NOT wrap the JSON in a markdown code fence** (no ```` ```json ```` ... ```` ``` ````). The `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes — a fence confuses the repair heuristic and produces a silent empty parse that breaks merge.
-- **Word-count gate (HARD)**: before writing each `**bold term**`, count: "1 – 2 – 3 – 4 – stop." After writing, count again. If either count reaches 5 or more, rewrite to ≤4 words immediately — drop the leading quantifier/adjective, keep the noun head or key verb. Do not advance to the next claim until the current bold term is ≤4 words. For mechanism clauses (X converts, Y is entitled to, Z distributes), cite the key verb phrase (≤2 words) — NOT the full clause. Examples: "will automatically convert into shares" → **automatically convert**; "On par with payments for other Safes" → **On par with**; "Senior to payments for Common Stock" → **Senior to**; "ordinary and necessary expenses incurred while carrying on your trade" → **ordinary and necessary**; "$450- if that person is age 40 or younger" → **$450**.
+- Citation format — two formats, pick the tersest:
+  - **Format 1** (`claimText` = `sourceMatch`): `**sourceMatch** [N]` — bold 1–4 verbatim words from the evidence. Use when the source phrase reads naturally in prose. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].`
+  - **Format 2** (`claimText` ≠ `sourceMatch`): `[claimText](cite:N 'sourceMatch')` — the prose label can differ from the verbatim source term. Use when existing prose has its own phrasing or the source term doesn't fit. Example: `The company's [revenue grew](cite:3 '$4.2 million') significantly.`
+  - In both formats, `k` in CITATION_DATA = the `sourceMatch` (verbatim Domain B text, ≤4 words, NEVER a paraphrase).
+  - After the body, append a `<<<CITATION_DATA>>>` block using shorthand keys: `n` (id), `r` (reasoning), `f` (fullPhrase — copy 1–2 verbatim sentences containing the anchor, with proper JSON escaping), `k` (anchorText ≤4 words verbatim), `p` (pageId as `"page_number_N_index_I"` — page 1=`"page_number_1_index_0"`, page 2=`"page_number_2_index_1"`, etc.), `l` (lineIds — sparse tagged lines, include anchor line plus 1–2 neighbors). One unique ID per distinct fact. **Do NOT wrap the JSON in a markdown code fence** (no ```` ```json ```` ... ```` ``` ````). The `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes — a fence confuses the repair heuristic and produces a silent empty parse that breaks merge.
+- **Terse `sourceMatch` gate**: before writing each citation, pick the `sourceMatch` (`k`) first — the tersest verbatim phrase from the source that uniquely identifies the evidence. 1–2 words is ideal; 3–4 is acceptable; 5+ means you're grabbing context that belongs in prose. Drop the leading quantifier/adjective, keep the noun head or key verb. Then decide: does this `sourceMatch` read naturally as `claimText` in the prose (Format 1), or does the prose need its own phrasing (Format 2)? For mechanism clauses, cite the key verb phrase (≤2 words) — NOT the full clause. Examples: "will automatically convert into shares" → `sourceMatch` = `"automatically convert"`; "On par with payments for other Safes" → `sourceMatch` = `"On par with"`; "$450- if that person is age 40 or younger" → `sourceMatch` = `"$450"`.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
