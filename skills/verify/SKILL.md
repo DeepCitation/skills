@@ -98,7 +98,7 @@ Use **standard markdown only** — no raw HTML tags.
 
 ### Progressive disclosure — the scan-anchor chain
 
-Users scan, they don't read (see `docs/agents/concepts.md`). Each view state has one scan anchor; shorter and terser anchors make every state work better:
+Users scan, they don't read (see `packages/deepcitation/docs/agents/deep-citation-concepts.md`). Each view state has one scan anchor; shorter and terser anchors make every state work better:
 
 1. **`preview`** — the reader skims `claimText` (bolded terms) with a `verificationBadge` beside each. Terse `claimText` = clean scan target that doesn't dominate the sentence.
 2. **`focusPopover`** — clicking `claimText` shows `sourceContext` with `sourceMatch` highlighted in amber. The `keyholeViewport` is pre-centered on `sourceMatch`. Terse `sourceMatch` = tight keyhole framing, instant confirmation. If `sourceMatch` = the entire paragraph, **no highlight is shown** — the anchor drowns in its own context.
@@ -125,7 +125,7 @@ Users scan, they don't read (see `docs/agents/concepts.md`). Each view state has
 
 ### In-text markers — Domain A (`claimText`) and Domain B (`sourceMatch`)
 
-Every citation connects two documents (see `docs/agents/concepts.md`):
+Every citation connects two documents (see `packages/deepcitation/docs/agents/deep-citation-concepts.md`):
 - **Domain A** — the asserting document (your report). The `claimText` is what the reader sees bolded or linked.
 - **Domain B** — the authoritative document (the evidence). The `sourceMatch` (`k`) is the verbatim phrase that the search locates and the `keyholeViewport` frames.
 
