@@ -116,6 +116,7 @@ Users scan, they don't read (see `packages/deepcitation/docs/agents/deep-citatio
 4. **Verbatim**: `k` must be a contiguous substring of `sourceContext` — never a paraphrase, never with ellipsis.
 
 **Per-citation SELF-CHECK — run this in your head before AND after writing each citation:**
+0. **CoT gate — locate the source sentence first.** Before deciding any `sourceMatch`, find the sentence in the evidence that proves the claim and hold it in mind as `sourceContext`. You cannot pick `sourceMatch` until you have that sentence — `sourceMatch` must be a word-for-word substring of `sourceContext`. If the phrase you want doesn't appear verbatim in that sentence, your planned `sourceMatch` is a paraphrase: find the right sentence first, then extract the key term.
 1. **Pick `sourceMatch` first** — the terse verbatim phrase from the source (Domain B). Shorter is safer: 1–2 words is ideal, 3–4 is acceptable. If you're at 5+, you're grabbing context that belongs in prose, not in the anchor. Drop the leading quantifier or filler adjective.
    - "six ground floor commercial units" → **ground floor commercial** (3w) — drop the number
    - "fifty-nine interior underground parking units" → **underground parking** (2w) — drop the count and modifier
@@ -202,28 +203,32 @@ For tax/regulatory text: dollar amounts, percentages, and named legal tests are 
 
 ### Citation data block
 
-After the body text, append a `<<<CITATION_DATA>>>` block. Field definitions are in `packages/deepcitation/docs/agents/deep-citation-standards.md` §4. Critical reminders:
+After the body text, append a `<<<CITATION_DATA>>>` block. Fields must appear in **CoT order** — writing them in sequence forces the right reasoning: articulate why first (`r`), commit to the full quote (`f`), then extract the key term (`k`), then locate it (`p`, `l`).
 
-- **`k` / `anchorText`** (Domain B) — the verbatim short anchor from the source. ≤4 words, ≤40 chars. In Format 1, `k` equals the bold `claimText`. In Format 2, `k` is the verbatim source term.
-- **`f` / `fullPhrase`** — copy 1–2 verbatim sentences from the source that contain the anchor. Must be significantly longer than `k` — it provides the highlight context. Use proper JSON escaping for quotes.
-- **`p` / `pageId` format is `"page_number_N_index_I"`** — e.g. `"page_number_1_index_0"` (page 1, array index 0). Derive from the array position: page 1 = index 0, page 2 = index 1, etc. Format: `page_number_{1-indexed page number}_index_{0-indexed array position}`.
-- **`l` / `lineIds`** — line IDs of the anchor's location. **`lineIds` are sparse** — not every line is tagged. Use the nearest `<line id="N">` tag visible in the prepare output. Include the anchor line plus 1–2 adjacent tagged neighbors for context.
-
-Shorthand keys: `n`=id, `r`=reasoning, `f`=fullPhrase, `k`=anchorText, `p`=pageId, `l`=lineIds
+| Shorthand | Full name | Rule |
+|-----------|-----------|------|
+| `n` | id | Integer matching the `[N]` marker in the body |
+| `r` | reasoning | One phrase: *why* this fact supports the claim |
+| `f` | source_context | Verbatim sentence(s) from the evidence — the full quote `k` is extracted from |
+| `k` | source_match | 1–4 verbatim words from `f` — **must be a substring of `f`**, never a paraphrase |
+| `p` | page_id | `"page_number_N_index_I"` — copy from `<page_number_N_index_I>` tags in the summary |
+| `l` | line_ids | `sourceMatch` line ± 1–2 adjacent lines (forming `sourceContext`), e.g. `[19, 20, 21]` |
 
 ```
 <<<CITATION_DATA>>>
 {
   "ATTACHMENT_ID": [
-    {"n": 1, "r": "states the invoice total", "f": "The invoice totals USD 4,350.00 for services rendered by Acme Corp", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]},
-    {"n": 2, "r": "names the service provider", "f": "services rendered by Acme Corp on March 15, 2024 per the attached agreement", "k": "Acme Corp", "p": "page_number_1_index_0", "l": [2, 3, 4]},
-    {"n": 3, "r": "states the service date", "f": "Acme Corp on March 15, 2024 per the attached agreement", "k": "March 15, 2024", "p": "page_number_1_index_0", "l": [4, 5, 6]}
+    {"n": 1, "r": "states invoice total", "f": "The invoice total is USD 4,350.00 for services rendered by Acme Corp on March 15, 2024.", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]},
+    {"n": 2, "r": "names the service provider", "f": "The invoice total is USD 4,350.00 for services rendered by Acme Corp on March 15, 2024.", "k": "Acme Corp", "p": "page_number_1_index_0", "l": [2, 3, 4]},
+    {"n": 3, "r": "gives the service date", "f": "The invoice total is USD 4,350.00 for services rendered by Acme Corp on March 15, 2024.", "k": "March 15, 2024", "p": "page_number_1_index_0", "l": [4, 5, 6]}
   ]
 }
 <<<END_CITATION_DATA>>>
 ```
 
 Use the `attachmentId` from the prepare output as the group key.
+
+**`f` → `k` substring rule (hard).** Write `f` first; then scan it visually for the 1–4 word key term and copy it exactly as `k`. If the phrase you want for `k` does not appear word-for-word inside `f`, your `f` is wrong — fix `f`, then re-derive `k`. This one rule eliminates paraphrase failures at the source.
 
 **Common failure modes** — the trap is what the model naturally writes; the fix shows how terse `sourceMatch` values work better.
 
@@ -248,16 +253,13 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the prepare output (copy it in full)
-- Citation format — two formats, pick the tersest:
-  - **Format 1** (`claimText` = `sourceMatch`): `**sourceMatch** [N]` — bold 1–4 verbatim words from the evidence. Use when the source phrase reads naturally in prose. Example: `The invoice totals **USD 4,350.00** [1] for services by **Acme Corp** [2].`
-  - **Format 2** (`claimText` ≠ `sourceMatch`): `[claimText](cite:N 'sourceMatch')` — the prose label can differ from the verbatim source term. Use when existing prose has its own phrasing or the source term doesn't fit. Example: `The company's [revenue grew](cite:3 '$4.2 million') significantly.`
-  - In both formats, `k` in CITATION_DATA = the `sourceMatch` (verbatim Domain B text, ≤4 words, NEVER a paraphrase).
-  - After the body, append a `<<<CITATION_DATA>>>` block using shorthand keys: `n` (id), `r` (reasoning), `f` (fullPhrase — copy 1–2 verbatim sentences containing the anchor, with proper JSON escaping), `k` (anchorText ≤4 words verbatim), `p` (pageId as `"page_number_N_index_I"` — page 1=`"page_number_1_index_0"`, page 2=`"page_number_2_index_1"`, etc.), `l` (lineIds — sparse tagged lines, include anchor line plus 1–2 neighbors). One unique ID per distinct fact. **Do NOT wrap the JSON in a markdown code fence** (no ```` ```json ```` ... ```` ``` ````). The `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes — a fence confuses the repair heuristic and produces a silent empty parse that breaks merge.
-- **Terse `sourceMatch` gate**: before writing each citation, pick the `sourceMatch` (`k`) first — the tersest verbatim phrase from the source that uniquely identifies the evidence. 1–2 words is ideal; 3–4 is acceptable; 5+ means you're grabbing context that belongs in prose. Drop the leading quantifier/adjective, keep the noun head or key verb. Then decide: does this `sourceMatch` read naturally as `claimText` in the prose (Format 1), or does the prose need its own phrasing (Format 2)? For mechanism clauses, cite the key verb phrase (≤2 words) — NOT the full clause. Examples: "will automatically convert into shares" → `sourceMatch` = `"automatically convert"`; "On par with payments for other Safes" → `sourceMatch` = `"On par with"`; "$450- if that person is age 40 or younger" → `sourceMatch` = `"$450"`.
+- Citation format: **bold** 1–4 verbatim words from the evidence (`sourceMatch`) and place `[N]` after. After the body, append a `<<<CITATION_DATA>>>` block with fields in CoT order — **write them in this sequence**: `n` (citation id), `r` (one phrase: *why* this fact supports the claim), `f` (`sourceContext` — verbatim sentence(s) from the evidence, the full quote `k` is drawn from), `k` (`sourceMatch` — 1–4 verbatim words extracted from `f`, **must be a substring of `f`**, NEVER a paraphrase, NEVER more than 4 words, identical to the bold text), `p` (`page_number_N_index_I` — copy from `<page_number_N_index_I>` tags), `l` (line IDs — `sourceMatch` line ± 1–2 adjacent lines, e.g. `[19, 20, 21]`). One unique ID per distinct fact. Example entry: `{"n": 1, "r": "states invoice total", "f": "The invoice total is USD 4,350.00 for services rendered.", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]}`. **Do NOT wrap the JSON in a markdown code fence** — the `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes.
+- **CoT gate (runs first)**: before writing any `**bold term**`, locate the sentence in the evidence that proves the claim and write it as `f` (`sourceContext`). Then extract `k` (`sourceMatch`) from that sentence. If your planned key phrase doesn't appear word-for-word in `f`, it's a paraphrase — fix `f` first, then re-derive `k`.
+- **Terse `sourceMatch` gate**: count `k` words — "1 – 2 – 3 – 4 – stop." 1–2 words is ideal; 3–4 acceptable; 5+ means you're grabbing context that belongs in prose. Drop the leading quantifier/adjective, keep the noun head or key verb. For mechanism clauses, cite the key verb phrase (≤2 words) — NOT the full clause. Examples: "will automatically convert into shares" → `k` = `"automatically convert"`; "On par with payments for other Safes" → `k` = `"On par with"`.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
-- Each agent writes body text only (section heading + cited body text) and returns a one-line confirmation that includes the section heading and approximate line count (e.g. "Written: ## Pet Policy — 18 lines"). If an agent returns nothing or reports failure, do not proceed to merge — report the error to the user.
+- Each agent writes body text only (section heading + cited body text + `<<<CITATION_DATA>>>` block) and returns a one-line confirmation that includes the section heading and approximate line count (e.g. "Written: ## Pet Policy — 18 lines"). If an agent returns nothing or reports failure, do not proceed to merge — report the error to the user.
 
 **After both agents complete, merge + verify in one command** (renumber, citation generation, and verification happen automatically). Replace `{draft}` and `{topic}` with actual names (e.g. `lease-terms-body` and `lease-terms`):
 
@@ -286,7 +288,7 @@ npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
 Structure with headings, tables, and lists matching the evidence. If evidence seems incomplete for the question, note what's covered and suggest the user share additional documents.
 
 **What goes in each file:**
-- **Body file** (your output or from agents): markdown prose with `**bold term** [N]` markers and an appended `<<<CITATION_DATA>>>` block.
+- **Body file** (`.deepcitation/section-a.md`, `section-b.md`, or `{draft}-body.md`): markdown prose with `**bold term** [N]` markers, then a `<<<CITATION_DATA>>>` block with fields in CoT order (`n`, `r`, `f`, `k`, `p`, `l`).
 - **Your response to the user**: The full markdown report body — prose only.
 
 ## 3. Verify
@@ -334,7 +336,7 @@ If you suspect better evidence exists, add:
 - **Minimum tool calls** — do not make exploratory calls (ls, Glob, Grep, extra Read) between pipeline steps. Do not read files back after writing them — **except when merge exits non-zero**, in which case read the section files to diagnose the format failure (see the post-merge failure block above). Single-topic pipeline: prepare → Read summary → Write body → Bash(verify+open). Multi-topic pipeline: prepare → Read summary → [Agent A ∥ Agent B] → Bash(merge+verify+open). Complete each step once.
 - **Never run login proactively** — only run `deepcitation auth` if prepare or verify output contains the exact phrase "action needed". Do not run login as a precaution or to check auth status.
 - **Run verify ONCE** — do not edit the draft and re-verify.
-- **Write body text only** — bold key terms with `[N]` markers and append a `<<<CITATION_DATA>>>` block with coordinates (`n`, `k`, `p`, `l`). Do not include structural boilerplate or HTML in the body file.
+- **Write body text only** — bold key terms with `[N]` markers and append a `<<<CITATION_DATA>>>` block with fields in CoT order (`n`, `r`, `f`, `k`, `p`, `l`). Do not include structural boilerplate or HTML in the body file.
 - **Only the CLI produces HTML** — the verified HTML is created exclusively by `npx -y deepcitation@latest verify`. If you cannot run the CLI, stop and report the error.
 - **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
 - **Never install npm packages to "fix" CLI behavior.** The `deepcitation` CLI is a bundled binary; external packages (`undici`, `node-fetch`, `axios`, etc.) cannot affect its network stack. The only valid CLI install/upgrade is `npm install -g deepcitation@latest`, and only when the CLI itself prints "Update available".
