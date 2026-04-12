@@ -1,6 +1,6 @@
 ---
 name: verify
-description: ALWAYS execute the full DeepCitation verification workflow when /verify appears anywhere in the prompt — regardless of how the rest of the message is phrased. Triggered by /verify with a file, URL, question, or existing content. Has built-in PDF, OCR, and web readers — always use prepare to read evidence files.
+description: Use when /verify appears anywhere in the prompt, or when the user asks to verify claims, cite sources, find evidence, prove facts, check accuracy, extract OCR text, or validate content from a document or URL — with a file path, URL, user question, or existing content to work from. Triggers the full DeepCitation pipeline automatically.
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Agent
 ---
 
@@ -26,57 +26,22 @@ A claim cannot be its own evidence.
 `prepare` is the **only** way to read evidence — it has built-in PDF, OCR, and web readers.
 
 ```bash
-mkdir -p .deepcitation && npx -y deepcitation@latest prepare <file-or-url> --text > .deepcitation/<name>.txt 2>&1
+npx -y deepcitation@latest prepare <file-or-url> --text > .deepcitation/<name>.txt 2>&1
 ```
 
 Multiple sources: run all in parallel with `&` + `wait`.
 
-If the output contains the literal phrase "action needed", authenticate. Auth failure is **recoverable**, not a hard stop. Use this exact command — it forces a pseudo-TTY so the browser OAuth flow works even when the shell has no TTY:
+If the output contains the phrase **"action needed"**, auth is needed — **follow the recovery options the CLI printed**. Option A (PTY via `script`) is self-sufficient for agent contexts: run it yourself, do not stop and ask the user. After completing, retry the same prepare command.
 
-```bash
-script -q -c "npx -y deepcitation@latest auth" /dev/null
-```
+If the output contains **"Update available"**, run `npm install -g deepcitation@latest`, then retry.
 
-`script` wraps the process in a pseudo-TTY, making `process.stdin.isTTY` return `true` inside Node. The browser opens via `explorer.exe`/`xdg-open`, completes the OAuth callback, and writes credentials to `~/.deepcitation/credentials.json`. Use a generous timeout (≥180s) because OAuth waits on a human. After it returns, **retry the same prepare command**.
-
-**Do NOT stop and ask the user to authenticate.** This command is self-sufficient — run it yourself.
-
-If `script` is unavailable or the above still prints `Non-interactive environment detected` (rare — cloud sandboxes with `DC_NON_INTERACTIVE=1`), fall back to the manual-key path:
-
-1. Show the URL (`https://deepcitation.com/cli-auth?manual=true`) to the user **verbatim** and ask them to paste an `sk-dc-…` API key.
-2. Once they paste `<the-key>`, run `npx -y deepcitation@latest auth --key '<the-key>'` to save it.
-3. **Retry the original prepare command exactly once.** If it still fails, stop.
-
-If the output contains "Update available", run `npm install -g deepcitation@latest`, then retry the command.
-
-**Only stop completely if all of the above fail.** Show the full error and end your response. Reports require verified evidence from `prepare`.
+**Only stop completely if all recovery options fail.** Show the full error and end your response.
 
 Never use `DEEPCITATION_API_KEY=...` env-var prefixing in commands. Never print key values in chat.
 
 ### Environment notes — cloud sandboxes (Claude Cowork, etc.)
 
-If you are running inside a cloud sandbox (detect via `$CLAUDE_CODE_REMOTE == "true"` for Cowork), the following constraints apply. Read this section once before invoking any `deepcitation` command in such an environment.
-
-**The CLI is a single bundled binary.** `deepcitation` is published to npm with all of its HTTP transport (including `undici`) bundled inside. Installing additional packages (`npm install undici`, `npm install -g undici`, `npm install node-fetch`, etc.) **cannot affect** the bundled CLI's network behavior. Do not attempt this workaround under any circumstances — it will waste time and resolve nothing.
-
-**Do not modify proxy environment variables.** Cowork sets `HTTP_PROXY` / `HTTPS_PROXY` to route egress through a sandbox-managed proxy. The bundled CLI auto-detects this and routes through it correctly. Overriding `HTTP_PROXY=""`, `HTTPS_PROXY=""`, or `NO_PROXY=api.deepcitation.com` on individual command invocations is **not a supported workaround** and is more likely to break the request than fix it.
-
-**Expected command timing.** Use these as your "is this hung?" baseline:
-
-| Command | Typical | Worst case | If exceeded |
-|---------|---------|------------|-------------|
-| `prepare` PDF | ~1 s | ~5 s | Almost certainly hung — abort and report |
-| `prepare` URL or office file | ~5 s | ~30 s | Wait up to 60 s, then abort |
-| `verify --markdown` | ~0.5 s | ~5 s | Almost certainly hung — abort and report |
-| `auth --key '<key>'` | <1 s | ~2 s | Abort and report |
-
-The CLI itself enforces a 90-second hard ceiling on every request and exits with a clear timeout error. **Do not extend this** by backgrounding the command with `&`, wrapping it in `for i in $(seq 1 24); do sleep 10`, `timeout 600 npx ...`, or any similar pattern. If the CLI hits its own timeout, the request is genuinely stuck — additional retries against the same endpoint will not succeed.
-
-**When a command times out in a sandbox, the failure mode is the network layer, not the CLI logic.** Do not "simplify the input" (smaller markdown, fewer citations, blanker templates) hoping the API will respond — the API never received the request, or the response never reached you. Stop after one failure, surface the error verbatim, and let the user decide whether to retry, switch networks, or contact support.
-
-**You may NOT fall back to building a "verified-looking" HTML report from your own knowledge of the document.** If `verify` cannot complete, the deliverable is not producible, full stop. Returning a hand-built HTML that mimics the verified format is worse than reporting the failure honestly — it presents unverified text as verified.
-
-**Recognize structured CLI errors.** When the CLI fails with a transport-layer issue, it emits a final line on stderr beginning with `__DC_ERROR__` followed by JSON (e.g. `__DC_ERROR__ {"type":"timeout","phase":"response_headers","retryable":false,"recoverable":false,...}`). If `recoverable: false`, treat it as a hard stop — do not retry, do not try workarounds.
+See [cloud-sandbox-constraints.md](cloud-sandbox-constraints.md) for the full constraint set (proxy rules, timeout baselines, `__DC_ERROR__` handling, no-fallback rule). Read it once before invoking any `deepcitation` command in a Cowork/remote environment (`$CLAUDE_CODE_REMOTE == "true"`).
 
 Read each summary file **fully** with the Read tool (no grep, no jq — read top to bottom).
 The summary contains `attachmentId` and `deepTextPages` (evidence text with
@@ -129,6 +94,19 @@ Users scan, they don't read (see `packages/deepcitation/docs/agents/deep-citatio
 4. **Ctrl+F test**: could a reader search for this `sourceMatch` and find it uniquely in the source? If yes, proceed. If it takes 5+ words to be unique, pick the noun head, not the whole phrase.
 
 ### In-text markers — Domain A (`claimText`) and Domain B (`sourceMatch`)
+
+The `sourceMatch` is a **Ctrl+F search key** — the 2–3 words a reader would type to locate this exact fact in the source. The prose sentence is the claim; the bold term is the evidence label. Ask before writing any anchor: *"What would I search for to find this fact in a 50-page document?"*
+
+| Fact type | `sourceMatch` (bold this) | Not this |
+|-----------|--------------------------|----------|
+| Dollar amount | `USD 4,350.00` | `invoice total is USD 4,350` |
+| Time limit | `two (2) weeks` | `remove pets within two weeks` |
+| Party name | `Acme Corp` | `services rendered by Acme Corp` |
+| Priority tier | `Senior to` | `senior to payments for Common Stock` |
+| Trigger mechanism | `automatically convert` | `will automatically convert into shares` |
+| Tax threshold | `$130,000 in pay` | `more than $130,000 in pay for the preceding year` |
+
+NEVER bold a full clause that restates the claim. Bold only the fact-specific label — the number, entity, tier marker, or trigger verb. Then decide the format (below).
 
 Every citation connects two documents (see `packages/deepcitation/docs/agents/deep-citation-concepts.md`):
 - **Domain A** — the asserting document (your report). The `claimText` is what the reader sees bolded or linked.
@@ -236,8 +214,8 @@ Use the `attachmentId` from the prepare output as the group key.
 
 ```
 Body:   The investment [converts automatically](cite:4 'automatically convert') on an equity financing.
-Data:   {"n": 4, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "1_0", "l": [20, 21]}
-                                                                                                          k = tick-quoted sourceMatch ("automatically convert"), NOT prose claimText ("converts automatically")
+Data:   {"n": 4, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "page_number_1_index_0", "l": [20, 21]}
+        ↑ k = tick-quoted sourceMatch ("automatically convert"), NOT prose claimText ("converts automatically")
 ```
 
 A common error is setting `k` to the prose claimText — this always fails, because `k` must be a substring of `f` (Domain B), and the prose claimText is from Domain A.
@@ -269,9 +247,18 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the prepare output (copy it in full)
-- Citation format: two formats available. **Format 1** (when sourceMatch works naturally as prose): bold the verbatim source term and place `[N]` after — `**sourceMatch** [N]`. **Format 2** (when prose has its own voice): `[claimText](cite:N 'sourceMatch')` where claimText is Domain A prose and sourceMatch is the verbatim Domain B term. After the body, append a `<<<CITATION_DATA>>>` block with fields in CoT order — **write them in this sequence**: `n` (citation id), `r` (one phrase: *why* this fact supports the claim), `f` (`sourceContext` — verbatim sentence(s) from the evidence, the full quote `k` is drawn from), `k` (`sourceMatch` — 1–4 verbatim words extracted from `f`, **must be a substring of `f`**, NEVER a paraphrase, NEVER more than 4 words. **Format 1:** `k` equals the bold term. **Format 2:** `k` equals the tick-quoted sourceMatch — NOT the prose claimText), `p` (`page_number_N_index_I` — copy from `<page_number_N_index_I>` tags), `l` (line IDs — `sourceMatch` line ± 1–2 adjacent lines, e.g. `[19, 20, 21]`). One unique ID per distinct fact. Example Format 1 entry: `{"n": 1, "r": "states invoice total", "f": "The invoice total is USD 4,350.00 for services rendered.", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]}`. Example Format 2 entry (body: `[converts automatically](cite:2 'automatically convert')`): `{"n": 2, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "page_number_1_index_0", "l": [20, 21]}` — note `k` is the tick-quoted sourceMatch, not "converts automatically". **Do NOT wrap the JSON in a markdown code fence** — the `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes.
+- **Citation format** — two formats, same rules as §2:
+  - **Format 1** (sourceMatch reads naturally as prose): `**sourceMatch** [N]`
+  - **Format 2** (prose has its own voice): `[claimText](cite:N 'sourceMatch')`
+- **CITATION_DATA block** — append after body, fields in CoT order: `n`, `r`, `f`, `k`, `p`, `l`
+  - **Format 1:** `k` = the bold term (identical to claimText)
+  - **Format 2:** `k` = the tick-quoted sourceMatch — **never** the prose claimText
+  - `p` format: `page_number_N_index_I` (copy from `<page_number_N_index_I>` tags in the summary)
+  - **Do NOT wrap JSON in a code fence** — `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` are the only wrappers
+  - F1 example: `{"n": 1, "r": "states invoice total", "f": "The invoice total is USD 4,350.00 for services rendered.", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]}`
+  - F2 example (body `[converts automatically](cite:2 'automatically convert')`): `{"n": 2, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "page_number_1_index_0", "l": [20, 21]}` — note `k` is tick-quoted sourceMatch, not "converts automatically"
 - **CoT gate (runs first)**: before writing any `**bold term**`, locate the sentence in the evidence that proves the claim and write it as `f` (`sourceContext`). Then extract `k` (`sourceMatch`) from that sentence. If your planned key phrase doesn't appear word-for-word in `f`, it's a paraphrase — fix `f` first, then re-derive `k`.
-- **Terse `sourceMatch` gate**: count `k` words — "1 – 2 – 3 – 4 – stop." 1–2 words is ideal; 3–4 acceptable; 5+ means you're grabbing context that belongs in prose. Drop the leading quantifier/adjective, keep the noun head or key verb. For mechanism clauses, cite the key verb phrase (≤2 words) — NOT the full clause. Examples: "will automatically convert into shares" → `k` = `"automatically convert"`; "On par with payments for other Safes" → `k` = `"On par with"`.
+- **Terse `sourceMatch` gate**: ask *"What 2–3 words would I Ctrl+F to find this fact in a 50-page document?"* — that is `k`. NEVER bold a full clause that restates the claim. Fact types → correct `k`: dollar amount → `USD 4,350.00`; time limit → `two (2) weeks`; priority tier → `Senior to`; trigger mechanism → `automatically convert`. If you reach 5+ words, you are citing context that belongs in prose — drop the leading quantifier/adjective, keep the noun head or key verb.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
@@ -307,6 +294,8 @@ Structure with headings, tables, and lists matching the evidence. If evidence se
 - **Body file** (`.deepcitation/section-a.md`, `section-b.md`, or `{draft}-body.md`): markdown prose with `**bold term** [N]` markers, then a `<<<CITATION_DATA>>>` block with fields in CoT order (`n`, `r`, `f`, `k`, `p`, `l`).
 - **Your response to the user**: The full markdown report body — prose only.
 
+> **STOP AND CHECK** — before running `verify`: (1) every bold term or `[claimText]` link has `[N]` / `cite:N`, (2) every `[N]` has a matching entry in `<<<CITATION_DATA>>>`, (3) **Format 1:** `k` equals the bold term exactly; **Format 2:** `k` equals the tick-quoted `sourceMatch` — not the prose claimText, (4) every `k` is a word-for-word substring of its `f`, (5) no `<<<CITATION_DATA>>>` block is wrapped in a code fence.
+
 ## 3. Verify
 
 Pick a clean output name matching the topic — the report lives in CWD, not `.deepcitation/`:
@@ -317,7 +306,7 @@ npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
   --out {topic}-verified.html
 ```
 
-If you skipped Step 1–2 because the HTML already had citation markers (triage row above), use `--html` instead:
+If you skipped Step 1–2 because the HTML already had citation markers (Step 1 triage table: "Existing verified HTML"), use `--html` instead:
 
 ```bash
 npx -y deepcitation@latest verify --html {existing}.html \
@@ -331,7 +320,7 @@ Do not use `verify --citations` directly — it is low-level and skips format no
 
 Options: `--style plain|report` (default: `report`), `--audience general|executive|technical|legal|medical` (default: `general`), `--theme auto|light|dark` (default: `auto`).
 
-If the output contains "action needed", authenticate via the recovery flow in Step 1 (run `deepcitation auth`, TTY → browser, non-TTY → ask user for a key, then retry).
+If the output contains "action needed", follow the recovery options the CLI printed (same as Step 1).
 
 Open the output (WSL first — most users run in WSL on Windows; macOS/Linux fallbacks are silent):
 
@@ -363,4 +352,3 @@ If you suspect better evidence exists, add:
 - Never expose API keys or render internal metadata as visible content
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
 
-ARGUMENTS: $ARGUMENTS
