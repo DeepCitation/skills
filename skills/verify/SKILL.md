@@ -116,7 +116,7 @@ Users scan, they don't read (see `packages/deepcitation/docs/agents/deep-citatio
 4. **Verbatim**: `k` must be a contiguous substring of `sourceContext` — never a paraphrase, never with ellipsis.
 
 **Per-citation SELF-CHECK — run this in your head before AND after writing each citation:**
-0. **CoT gate — locate the source sentence first.** Before deciding any `sourceMatch`, find the sentence in the evidence that proves the claim and hold it in mind as `sourceContext`. You cannot pick `sourceMatch` until you have that sentence — `sourceMatch` must be a word-for-word substring of `sourceContext`. If the phrase you want doesn't appear verbatim in that sentence, your planned `sourceMatch` is a paraphrase: find the right sentence first, then extract the key term.
+0. **CoT gate — locate the source sentence first.** Before deciding any `sourceMatch`, find the sentence in the evidence that proves the claim and hold it in mind as `f` (`source_context`). You cannot pick `sourceMatch` until you have that sentence — `sourceMatch` must be a word-for-word substring of `f`. If the phrase you want doesn't appear verbatim in that sentence, your planned `sourceMatch` is a paraphrase: find the right sentence first, then extract the key term.
 1. **Pick `sourceMatch` first** — the terse verbatim phrase from the source (Domain B). Shorter is safer: 1–2 words is ideal, 3–4 is acceptable. If you're at 5+, you're grabbing context that belongs in prose, not in the anchor. Drop the leading quantifier or filler adjective.
    - "six ground floor commercial units" → **ground floor commercial** (3w) — drop the number
    - "fifty-nine interior underground parking units" → **underground parking** (2w) — drop the count and modifier
