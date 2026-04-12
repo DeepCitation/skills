@@ -121,6 +121,10 @@ Users scan, they don't read (see `packages/deepcitation/docs/agents/deep-citatio
    - "six ground floor commercial units" → **ground floor commercial** (3w) — drop the number
    - "fifty-nine interior underground parking units" → **underground parking** (2w) — drop the count and modifier
 2. **Decide the format.** If `sourceMatch` reads naturally as `claimText` in the prose → Format 1 (`**sourceMatch** [N]`). If the prose already has its own phrasing, or the source term doesn't read naturally → Format 2 (`[claimText](cite:N 'sourceMatch')`).
+   **Format 2 trigger:** Use Format 2 whenever your natural prose phrasing would fail the CoT substring check — the phrase you want in prose doesn't appear verbatim in the source. Format 2 lets Domain A (prose) and Domain B (source) speak independently without either contorting. Examples:
+   - Prose: "the meals are not fully deductible" — source: "deduct only 50%" → `[not fully deductible](cite:N '50%')`
+   - Prose: "converts automatically on financing" — source: "will automatically convert into shares" → `[converts automatically](cite:N 'automatically convert')`
+   - Prose: "the person's age caps the deduction" — source: "limited by the age of the individual" → `[person's age](cite:N 'age of the individual')`
 3. **After writing**: recount `sourceMatch` words. If 5+, stop and shorten before moving on.
 4. **Ctrl+F test**: could a reader search for this `sourceMatch` and find it uniquely in the source? If yes, proceed. If it takes 5+ words to be unique, pick the noun head, not the whole phrase.
 
@@ -210,7 +214,7 @@ After the body text, append a `<<<CITATION_DATA>>>` block. Fields must appear in
 | `n` | id | Integer matching the `[N]` marker in the body |
 | `r` | reasoning | One phrase: *why* this fact supports the claim |
 | `f` | source_context | Verbatim sentence(s) from the evidence — the full quote `k` is extracted from |
-| `k` | source_match | 1–4 verbatim words from `f` — **must be a substring of `f`**, never a paraphrase |
+| `k` | source_match | 1–4 verbatim words from `f` — **must be a substring of `f`**, never a paraphrase. **Format 1:** `k` equals the bold claimText. **Format 2:** `k` equals the tick-quoted sourceMatch — NOT the prose claimText (they are independent). |
 | `p` | page_id | `"page_number_N_index_I"` — copy from `<page_number_N_index_I>` tags in the summary |
 | `l` | line_ids | `sourceMatch` line ± 1–2 adjacent lines (forming `sourceContext`), e.g. `[19, 20, 21]` |
 
@@ -228,6 +232,17 @@ After the body text, append a `<<<CITATION_DATA>>>` block. Fields must appear in
 
 Use the `attachmentId` from the prepare output as the group key.
 
+**Format 2 in CITATION_DATA — `k` is the sourceMatch, not the claimText.** When the body uses `[claimText](cite:N 'sourceMatch')`, the CITATION_DATA entry for that citation must set `k` to the tick-quoted sourceMatch, not the prose claimText:
+
+```
+Body:   The investment [converts automatically](cite:4 'automatically convert') on an equity financing.
+Data:   {"n": 4, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "1_0", "l": [20, 21]}
+                                                                                                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                                                                                          k = tick-quoted sourceMatch ("automatically convert"), NOT prose claimText ("converts automatically")
+```
+
+A common error is setting `k` to the prose claimText — this always fails, because `k` must be a substring of `f` (Domain B), and the prose claimText is from Domain A.
+
 **`f` → `k` substring rule (hard).** Write `f` first; then scan it visually for the 1–4 word key term and copy it exactly as `k`. If the phrase you want for `k` does not appear word-for-word inside `f`, your `f` is wrong — fix `f`, then re-derive `k`. This one rule eliminates paraphrase failures at the source.
 
 **Common failure modes** — the trap is what the model naturally writes; the fix shows how terse `sourceMatch` values work better.
@@ -241,6 +256,8 @@ Use the `attachmentId` from the prepare output as the group key.
 | `sourceMatch` = `"first 5 years of employment"` (5w) | `sourceMatch` = `"5 years"` (2w) | Cite the threshold, drop the qualifying phrase. Prose carries the rest: `within the first **5 years** [3] of employment`. |
 | `sourceMatch` = `"30% of the adjustable taxable income"` (6w) | `sourceMatch` = `"adjustable taxable income"` (3w) | Cite the distinctive noun, not the full clause. Prose: `capped at 30% of **adjustable taxable income** [5]`. |
 | Existing prose says "the person's age limits deductions" but source says "age of the individual" | Format 2: `[person's age](cite:7 'age of the individual')` | `claimText` uses Domain A's voice, `sourceMatch` uses Domain B's exact words. Neither needs to contort. |
+| Prose writes `**fully deductible**` but source says "you can deduct the cost of meals you sell to the public" — "fully deductible" isn't in `f`, so CLI drops it | Format 2: `[fully deductible](cite:N 'deduct the cost')` with `k` = `"deduct the cost"` | When prose summarizes what source states operationally, Format 2 decouples the two voices. The prose claim and the verbatim anchor are independently correct. |
+| Format 2 body `[converts automatically](cite:4 'automatically convert')` but CITATION_DATA has `k` = `"converts automatically"` (the claimText) | Set `k` = `"automatically convert"` (the tick-quoted sourceMatch) | In Format 2, `k` is always the tick-quoted sourceMatch from Domain B — never the prose claimText from Domain A. |
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
 
@@ -253,7 +270,7 @@ Spawn two agents simultaneously. Pass the full evidence text (copied verbatim fr
 Each sub-agent prompt must include:
 - Their assigned section topic and the user's original question
 - The full `deepTextPages` evidence text from the prepare output (copy it in full)
-- Citation format: **bold** 1–4 verbatim words from the evidence (`sourceMatch`) and place `[N]` after. After the body, append a `<<<CITATION_DATA>>>` block with fields in CoT order — **write them in this sequence**: `n` (citation id), `r` (one phrase: *why* this fact supports the claim), `f` (`sourceContext` — verbatim sentence(s) from the evidence, the full quote `k` is drawn from), `k` (`sourceMatch` — 1–4 verbatim words extracted from `f`, **must be a substring of `f`**, NEVER a paraphrase, NEVER more than 4 words, identical to the bold text), `p` (`page_number_N_index_I` — copy from `<page_number_N_index_I>` tags), `l` (line IDs — `sourceMatch` line ± 1–2 adjacent lines, e.g. `[19, 20, 21]`). One unique ID per distinct fact. Example entry: `{"n": 1, "r": "states invoice total", "f": "The invoice total is USD 4,350.00 for services rendered.", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]}`. **Do NOT wrap the JSON in a markdown code fence** — the `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes.
+- Citation format: two formats available. **Format 1** (when sourceMatch works naturally as prose): bold the verbatim source term and place `[N]` after — `**sourceMatch** [N]`. **Format 2** (when prose has its own voice): `[claimText](cite:N 'sourceMatch')` where claimText is Domain A prose and sourceMatch is the verbatim Domain B term. After the body, append a `<<<CITATION_DATA>>>` block with fields in CoT order — **write them in this sequence**: `n` (citation id), `r` (one phrase: *why* this fact supports the claim), `f` (`sourceContext` — verbatim sentence(s) from the evidence, the full quote `k` is drawn from), `k` (`sourceMatch` — 1–4 verbatim words extracted from `f`, **must be a substring of `f`**, NEVER a paraphrase, NEVER more than 4 words. **Format 1:** `k` equals the bold term. **Format 2:** `k` equals the tick-quoted sourceMatch — NOT the prose claimText), `p` (`page_number_N_index_I` — copy from `<page_number_N_index_I>` tags), `l` (line IDs — `sourceMatch` line ± 1–2 adjacent lines, e.g. `[19, 20, 21]`). One unique ID per distinct fact. Example Format 1 entry: `{"n": 1, "r": "states invoice total", "f": "The invoice total is USD 4,350.00 for services rendered.", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]}`. Example Format 2 entry (body: `[converts automatically](cite:2 'automatically convert')`): `{"n": 2, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "page_number_1_index_0", "l": [20, 21]}` — note `k` is the tick-quoted sourceMatch, not "converts automatically". **Do NOT wrap the JSON in a markdown code fence** — the `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` delimiters are the only wrappers the parser recognizes.
 - **CoT gate (runs first)**: before writing any `**bold term**`, locate the sentence in the evidence that proves the claim and write it as `f` (`sourceContext`). Then extract `k` (`sourceMatch`) from that sentence. If your planned key phrase doesn't appear word-for-word in `f`, it's a paraphrase — fix `f` first, then re-derive `k`.
 - **Terse `sourceMatch` gate**: count `k` words — "1 – 2 – 3 – 4 – stop." 1–2 words is ideal; 3–4 acceptable; 5+ means you're grabbing context that belongs in prose. Drop the leading quantifier/adjective, keep the noun head or key verb. For mechanism clauses, cite the key verb phrase (≤2 words) — NOT the full clause. Examples: "will automatically convert into shares" → `k` = `"automatically convert"`; "On par with payments for other Safes" → `k` = `"On par with"`.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
