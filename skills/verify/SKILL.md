@@ -237,7 +237,6 @@ Use the `attachmentId` from the prepare output as the group key.
 ```
 Body:   The investment [converts automatically](cite:4 'automatically convert') on an equity financing.
 Data:   {"n": 4, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "1_0", "l": [20, 21]}
-                                                                                                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
                                                                                                           k = tick-quoted sourceMatch ("automatically convert"), NOT prose claimText ("converts automatically")
 ```
 
@@ -256,7 +255,7 @@ A common error is setting `k` to the prose claimText — this always fails, beca
 | `sourceMatch` = `"first 5 years of employment"` (5w) | `sourceMatch` = `"5 years"` (2w) | Cite the threshold, drop the qualifying phrase. Prose carries the rest: `within the first **5 years** [3] of employment`. |
 | `sourceMatch` = `"30% of the adjustable taxable income"` (6w) | `sourceMatch` = `"adjustable taxable income"` (3w) | Cite the distinctive noun, not the full clause. Prose: `capped at 30% of **adjustable taxable income** [5]`. |
 | Existing prose says "the person's age limits deductions" but source says "age of the individual" | Format 2: `[person's age](cite:7 'age of the individual')` | `claimText` uses Domain A's voice, `sourceMatch` uses Domain B's exact words. Neither needs to contort. |
-| Prose writes `**fully deductible**` but source says "you can deduct the cost of meals you sell to the public" — "fully deductible" isn't in `f`, so CLI drops it | Format 2: `[fully deductible](cite:N 'deduct the cost')` with `k` = `"deduct the cost"` | When prose summarizes what source states operationally, Format 2 decouples the two voices. The prose claim and the verbatim anchor are independently correct. |
+| Prose writes `**fully deductible**` but source says "you can deduct the cost of meals you sell to the public" — "fully deductible" isn't in `f`, so the CoT substring check fails | Format 2: `[fully deductible](cite:N 'deduct the cost')` with `k` = `"deduct the cost"` | When prose summarizes what source states operationally, Format 2 decouples the two voices. The prose claim and the verbatim anchor are independently correct. |
 | Format 2 body `[converts automatically](cite:4 'automatically convert')` but CITATION_DATA has `k` = `"converts automatically"` (the claimText) | Set `k` = `"automatically convert"` (the tick-quoted sourceMatch) | In Format 2, `k` is always the tick-quoted sourceMatch from Domain B — never the prose claimText from Domain A. |
 
 ### Parallel generation — REQUIRED when the question has 2+ distinct sections
