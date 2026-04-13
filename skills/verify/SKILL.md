@@ -30,7 +30,7 @@ Every `/verify` call opens with a short out-loud preamble (1–3 sentences or a 
 For **any slow-tier evidence** (URL or office file), the single most important UX move is to fire `prepare` immediately in the same turn as the preamble — never wait for a second assistant message, and never let the preamble delay the network work. For **mixed evidence** (e.g. a fast PDF + a slow URL), launch all sources in parallel via Step 2's `&` + `wait` pattern so the slow URL sets the wall-clock floor and the fast PDF finishes inside that same window. For **all-fast evidence**, ordering is a wash (prepare will finish in a second either way) — still fire it in the same turn as the preamble.
 
 Example (slow — URL):
-> Verifying the claim that "Claude 4.6 Sonnet tops SWE-bench at 77.2%". Evidence: the Anthropic news post URL. URL fetches take ~20–30s — kicking off `prepare` now while you read this.
+> Verifying the claim that "a coding assistant achieves 75% accuracy on a standard programming benchmark". Evidence: the vendor's technical blog post URL. URL fetches take ~20–30s — kicking off `prepare` now while you read this.
 
 Example (fast — PDF):
 > Verifying two claims from `draft.md`: (1) tenants must remove pets within two weeks, and (2) monthly rent is $2,400. Evidence: `lease.pdf` (attached). Running `prepare` now.
@@ -57,7 +57,13 @@ A claim cannot be its own evidence.
 
 `prepare` is the **only** way to read evidence — it has built-in PDF, OCR, and web readers.
 
+Before running `prepare`, clear any stale localhost proxy that may have leaked from an expired Cowork session:
+
 ```bash
+# Clear stale Cowork proxy when not in a remote sandbox
+if [ "$CLAUDE_CODE_REMOTE" != "true" ]; then
+  case "${HTTP_PROXY}${HTTPS_PROXY}" in *localhost*) unset HTTP_PROXY HTTPS_PROXY ;; esac
+fi
 npx -y deepcitation@latest prepare <file-or-url> --text > .deepcitation/<name>.txt 2>&1
 ```
 
@@ -73,7 +79,7 @@ Never use `DEEPCITATION_API_KEY=...` env-var prefixing in commands. Never print 
 
 ### Environment notes — cloud sandboxes (Claude Cowork, etc.)
 
-See [cloud-sandbox-constraints.md](cloud-sandbox-constraints.md) for the full constraint set (proxy rules, timeout baselines, `__DC_ERROR__` handling, no-fallback rule). Read it once before invoking any `deepcitation` command in a Cowork/remote environment (`$CLAUDE_CODE_REMOTE == "true"`).
+See [cloud-sandbox-constraints.md](rules/cloud-sandbox-constraints.md) for the full constraint set (proxy rules, timeout baselines, `__DC_ERROR__` handling, no-fallback rule). Read it once before invoking any `deepcitation` command in a Cowork/remote environment (`$CLAUDE_CODE_REMOTE == "true"`).
 
 Read each summary file **fully** with the Read tool (no grep, no jq — read top to bottom).
 The summary contains `attachmentId` and `deepTextPages` (evidence text with
@@ -274,11 +280,21 @@ A common error is setting `k` to the prose claimText — this always fails, beca
 
 **If the Agent tool is unavailable**, write both sections yourself in sequence.
 
-Spawn two agents simultaneously. Pass the full evidence text (copied verbatim from the prepare output) into each agent's prompt.
+Spawn two agents simultaneously. Split the `deepTextPages` array by **page range** — Agent A gets the first half, Agent B gets the second half. Add a small overlap (2–3 pages) so both agents see shared introductory or framework sections. **Do not split by topic** — agents must only quote from their own assigned pages, which eliminates f-fabrication (the main failure mode on large documents).
+
+**How to compute the split before dispatching:**
+```python
+pages = data["deepTextPages"]          # list from prepare JSON
+mid = len(pages) // 2
+overlap = 2                            # shared pages at the boundary
+agent_a_pages = pages[:mid + overlap]  # pages 1 … N/2+2
+agent_b_pages = pages[mid - overlap:]  # pages N/2-2 … end
+```
+Write each range to a temp file (e.g. `.deepcitation/evidence-a.txt`, `.deepcitation/evidence-b.txt`) and pass the file path to each agent.
 
 Each sub-agent prompt must include:
-- Their assigned section topic and the user's original question
-- The full `deepTextPages` evidence text from the prepare output (copy it in full)
+- Their assigned page range (e.g. "pages 1–{mid+overlap} of {total}") and the user's original question
+- Their page range evidence text — tell the agent to **read the file** at the path you provide (do not paste the full text inline)
 - **Citation format** — two formats, same rules as §2:
   - **Format 1** (sourceMatch reads naturally as prose): `**sourceMatch** [N]`
   - **Format 2** (prose has its own voice): `[claimText](cite:N 'sourceMatch')`
@@ -291,6 +307,9 @@ Each sub-agent prompt must include:
   - F2 example (body `[converts automatically](cite:2 'automatically convert')`): `{"n": 2, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "page_number_1_index_0", "l": [20, 21]}` — note `k` is tick-quoted sourceMatch, not "converts automatically"
 - **CoT gate (runs first)**: before writing any `**bold term**`, locate the sentence in the evidence that proves the claim and write it as `f` (`sourceContext`). Then extract `k` (`sourceMatch`) from that sentence. If your planned key phrase doesn't appear word-for-word in `f`, it's a paraphrase — fix `f` first, then re-derive `k`.
 - **Terse `sourceMatch` gate**: ask *"What 2–3 words would I Ctrl+F to find this fact in a 50-page document?"* — that is `k`. NEVER bold a full clause that restates the claim. Fact types → correct `k`: dollar amount → `USD 4,350.00`; time limit → `two (2) weeks`; priority tier → `Senior to`; trigger mechanism → `automatically convert`. If you reach 5+ words, you are citing context that belongs in prose — drop the leading quantifier/adjective, keep the noun head or key verb.
+- **Unique citation IDs — HARD RULE**: Every `[N]` integer must be **unique** across the entire section file. Never reuse the same number for a different fact. Each new fact = new integer. If you are citing two different sentences about the same topic, assign them different n values (e.g., n=7 and n=8), not both n=7.
+- **Format 2 when bold ≠ k — HARD RULE**: Whenever your prose label is NOT the exact verbatim phrase that appears in the source sentence, you MUST use Format 2: `[prose label](cite:N 'verbatim k')`. Never bold a term that you can't Ctrl+F find word-for-word in `f`. Common cases requiring Format 2: concept names ("forward alignment", "circuit analysis"), acronym expansions ("RLHF", "DPO"), category labels ("sparse autoencoders"). Common cases for Format 1 (where bold = k verbatim): specific numbers, proper nouns, technical terms that appear word-for-word. Self-check: look at the prose label you plan to bold — does that exact phrase appear in `f`? If no → use Format 2.
+- **Bold label must equal k exactly (Format 1)**: When you DO use Format 1, the bold text `**like this**` must be word-for-word identical to the `"k"` field in CITATION_DATA. Mismatched bold/k causes auto-promotion failures during verify.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
@@ -338,7 +357,7 @@ npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
   --out {topic}-verified.html
 ```
 
-If you skipped Step 2–3 because the HTML already had citation markers (Step 2 triage table: "Existing verified HTML"), use `--html` instead:
+If you skipped the Prepare and Respond steps because the HTML already had citation markers (Step 2 triage table: "Existing verified HTML"), use `--html` instead:
 
 ```bash
 npx -y deepcitation@latest verify --html {existing}.html \
