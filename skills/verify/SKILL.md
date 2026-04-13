@@ -11,22 +11,35 @@ Answer any question as part of the verification report — not as a standalone r
 
 ## 1. Orient — state the claim and the evidence
 
-Begin every `/verify` call with a short out-loud preamble (1–3 sentences or a 2–3 item bullet list) before running any command. This is a CoT gate that gives the user scope and progress clarity up front. It names:
+Every `/verify` call opens with a short out-loud preamble (1–3 sentences or a 2–3 item bullet list) that names:
 
 - **The claim(s)** — what specifically is being verified? Quote or briefly summarize each assertion.
-- **The evidence on the table** — which file(s), URL(s), or prior-message content will serve as the authoritative source? List each one by name.
-- **If no evidence was provided** — name the official sources you plan to look up (legislation, regulator publications, standards bodies, peer-reviewed studies) and/or the local files you'll check.
+- **The evidence on the table** — which file(s), URL(s), or prior-message content is the authoritative source? List each one by name.
+- **If no evidence was provided** — the official sources you plan to look up (legislation, regulator publications, standards bodies, peer-reviewed studies) and/or the local files you'll check.
 
-Keep it terse. This is **not** a confirmation step — proceed straight to Step 2 (Prepare) after writing it. Do not ask the user to approve the plan unless Step 2's triage table says the claims-vs-evidence split is ambiguous.
+**Write the preamble in the same assistant turn as the Step 2 `prepare` call — do not serialize it ahead of the network work.** Text streams to the user first, so they read the preamble while `prepare` is already running. This is a CoT gate for user clarity and progress, **not** a confirmation checkpoint; do not ask for approval unless Step 2's triage table says the claims-vs-evidence split is ambiguous.
 
-Example (evidence supplied):
-> Verifying two claims from `draft.md`: (1) tenants must remove pets within two weeks, and (2) monthly rent is $2,400. Evidence on the table: `lease.pdf` (attached). Running prepare on it now.
+**Prepare latency is asymmetric — plan parallelism accordingly:**
+
+| Evidence type | Expected `prepare` latency |
+|---|---|
+| Images, PDFs | upload time + ~0.5s (fast) |
+| URLs (web pages) | ~20–30s per URL |
+| Office files (`.docx`, `.xlsx`, `.pptx`) | ~20–30s per file |
+
+For **any slow-tier evidence** (URL or office file), the single most important UX move is to fire `prepare` immediately in the same turn as the preamble — never wait for a second assistant message, and never let the preamble delay the network work. For **mixed evidence** (e.g. a fast PDF + a slow URL), launch all sources in parallel via Step 2's `&` + `wait` pattern so the slow URL sets the wall-clock floor and the fast PDF finishes inside that same window. For **all-fast evidence**, ordering is a wash (prepare will finish in a second either way) — still fire it in the same turn as the preamble.
+
+Example (slow — URL):
+> Verifying the claim that "Claude 4.6 Sonnet tops SWE-bench at 77.2%". Evidence: the Anthropic news post URL. URL fetches take ~20–30s — kicking off `prepare` now while you read this.
+
+Example (fast — PDF):
+> Verifying two claims from `draft.md`: (1) tenants must remove pets within two weeks, and (2) monthly rent is $2,400. Evidence: `lease.pdf` (attached). Running `prepare` now.
+
+Example (mixed — PDF + URL):
+> Verifying three claims about Q3 earnings from `memo.md`. Evidence: the 10-Q PDF (fast) and the press release URL (~25s). Launching both in parallel so the URL fetch overlaps with the PDF read.
 
 Example (no evidence supplied):
-> Verifying the claim that California SB-253 requires Scope 3 emissions disclosure for companies with >$1B revenue. No evidence file provided — I'll look up the official California legislative text and CARB implementation guidance as primary sources.
-
-Example (multiple sources):
-> Verifying three claims about the Q3 earnings summary in `memo.md`. Evidence on the table: the 10-Q PDF and the press release URL you shared. Preparing both in parallel now.
+> Verifying that California SB-253 requires Scope 3 emissions disclosure for companies with >$1B revenue. No evidence file provided — I'll look up the official California legislative text and CARB implementation guidance as primary sources.
 
 ## 2. Prepare
 
