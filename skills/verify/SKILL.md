@@ -9,7 +9,26 @@ allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Agent
 Execute the pipeline below whenever `/verify` appears in the prompt.
 Answer any question as part of the verification report — not as a standalone response.
 
-## 1. Prepare
+## 1. Orient — state the claim and the evidence
+
+Begin every `/verify` call with a short out-loud preamble (1–3 sentences or a 2–3 item bullet list) before running any command. This is a CoT gate that gives the user scope and progress clarity up front. It names:
+
+- **The claim(s)** — what specifically is being verified? Quote or briefly summarize each assertion.
+- **The evidence on the table** — which file(s), URL(s), or prior-message content will serve as the authoritative source? List each one by name.
+- **If no evidence was provided** — name the official sources you plan to look up (legislation, regulator publications, standards bodies, peer-reviewed studies) and/or the local files you'll check.
+
+Keep it terse. This is **not** a confirmation step — proceed straight to Step 2 (Prepare) after writing it. Do not ask the user to approve the plan unless Step 2's triage table says the claims-vs-evidence split is ambiguous.
+
+Example (evidence supplied):
+> Verifying two claims from `draft.md`: (1) tenants must remove pets within two weeks, and (2) monthly rent is $2,400. Evidence on the table: `lease.pdf` (attached). Running prepare on it now.
+
+Example (no evidence supplied):
+> Verifying the claim that California SB-253 requires Scope 3 emissions disclosure for companies with >$1B revenue. No evidence file provided — I'll look up the official California legislative text and CARB implementation guidance as primary sources.
+
+Example (multiple sources):
+> Verifying three claims about the Q3 earnings summary in `memo.md`. Evidence on the table: the 10-Q PDF and the press release URL you shared. Preparing both in parallel now.
+
+## 2. Prepare
 
 Identify the evidence document (the authoritative source — not the claims).
 A claim cannot be its own evidence.
@@ -19,7 +38,7 @@ A claim cannot be its own evidence.
 | User provided a file/URL as evidence | That file/URL |
 | Prior chat OR a user-supplied file (e.g. `index.html`, `draft.md`) contains claims to verify | Use those claims **verbatim** — do NOT rewrite or rephrase them. Prepare the separate evidence document, then cite the existing claim text. |
 | Claims about public/official subjects, no evidence | Web-search for primary sources (legislation, official reports, studies) |
-| Existing verified HTML already produced by the CLI | Skip to Step 3 with `verify --html` |
+| Existing verified HTML already produced by the CLI | Skip to Step 4 with `verify --html` |
 | You prepared the claims file as evidence | Web-search for primary sources and re-prepare |
 | Ambiguous (unclear which file is claims vs evidence) | Ask the user |
 
@@ -50,7 +69,7 @@ mechanism — having evidence text in context (even repeated) improves citation 
 
 > **CLI version:** `deepTextPages` requires the latest CLI. If your summary shows `deepTextPromptPortion` instead, run `npm install -g deepcitation@latest` and retry.
 
-## 2. Respond with citations
+## 3. Respond with citations
 
 > **Citation rules reference**: All anchor text, display label, and citation data field rules are defined in
 > `packages/deepcitation/docs/agents/deep-citation-standards.md` (§1–§4 and §9 UX contract). This skill owns the *authoring
@@ -296,7 +315,7 @@ Structure with headings, tables, and lists matching the evidence. If evidence se
 
 > **STOP AND CHECK** — before running `verify`: (1) every bold term or `[claimText]` link has `[N]` / `cite:N`, (2) every `[N]` has a matching entry in `<<<CITATION_DATA>>>`, (3) **Format 1:** `k` equals the bold term exactly; **Format 2:** `k` equals the tick-quoted `sourceMatch` — not the prose claimText, (4) every `k` is a word-for-word substring of its `f`, (5) no `<<<CITATION_DATA>>>` block is wrapped in a code fence.
 
-## 3. Verify
+## 4. Verify
 
 Pick a clean output name matching the topic — the report lives in CWD, not `.deepcitation/`:
 
@@ -306,7 +325,7 @@ npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
   --out {topic}-verified.html
 ```
 
-If you skipped Step 1–2 because the HTML already had citation markers (Step 1 triage table: "Existing verified HTML"), use `--html` instead:
+If you skipped Step 2–3 because the HTML already had citation markers (Step 2 triage table: "Existing verified HTML"), use `--html` instead:
 
 ```bash
 npx -y deepcitation@latest verify --html {existing}.html \
@@ -320,7 +339,7 @@ Do not use `verify --citations` directly — it is low-level and skips format no
 
 Options: `--style plain|report` (default: `report`), `--audience general|executive|technical|legal|medical` (default: `general`), `--theme auto|light|dark` (default: `auto`).
 
-If the output contains "action needed", follow the recovery options the CLI printed (same as Step 1).
+If the output contains "action needed", follow the recovery options the CLI printed (same as Step 2).
 
 Open the output (WSL first — most users run in WSL on Windows; macOS/Linux fallbacks are silent):
 
@@ -343,7 +362,7 @@ If you suspect better evidence exists, add:
 - **Run verify ONCE** — do not edit the draft and re-verify.
 - **Write body text only** — bold key terms with `[N]` markers and append a `<<<CITATION_DATA>>>` block with fields in CoT order (`n`, `r`, `f`, `k`, `p`, `l`). Do not include structural boilerplate or HTML in the body file.
 - **Only the CLI produces HTML** — the verified HTML is created exclusively by `npx -y deepcitation@latest verify`. If you cannot run the CLI, stop and report the error.
-- **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 1 for auth failure behavior.
+- **Never generate citations without evidence** — if auth or network fails, show the error and stop. See Step 2 for auth failure behavior.
 - **Never install npm packages to "fix" CLI behavior.** The `deepcitation` CLI is a bundled binary; external packages (`undici`, `node-fetch`, `axios`, etc.) cannot affect its network stack. The only valid CLI install/upgrade is `npm install -g deepcitation@latest`, and only when the CLI itself prints "Update available".
 - **Never modify proxy environment variables on individual command runs.** No `HTTP_PROXY=`, `HTTPS_PROXY=`, `NO_PROXY=` prefixing. The CLI handles proxies automatically. If a request fails despite this, surface the failure — do not work around it.
 - **Never extend command timeouts via shell wrappers.** No `&` backgrounding, no `for i in $(seq …); do sleep N`, no `timeout 600 npx ...`. The CLI's built-in 90-second ceiling is authoritative; exceeding it means the request is broken, not slow.
