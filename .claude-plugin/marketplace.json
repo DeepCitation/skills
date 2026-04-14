@@ -1,0 +1,19 @@
+{
+  "name": "deepcitation-skills",
+  "description": "DeepCitation skills for Claude Code — verify claims, audit citations, extract evidence",
+  "owner": {
+    "name": "DeepCitation",
+    "email": "support@deepcitation.com",
+    "url": "https://deepcitation.com"
+  },
+  "plugins": [
+    {
+      "name": "deepcitation",
+      "description": "Verify AI claims against source documents with grounded citations",
+      "version": "0.1.0",
+      "source": "./",
+      "category": "research",
+      "homepage": "https://deepcitation.com"
+    }
+  ]
+}

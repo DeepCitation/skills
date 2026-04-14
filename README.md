@@ -8,7 +8,16 @@ Skills for AI coding agents (Claude Code, Cursor, etc.) that integrate with the 
 
 ## Install
 
-### Claude Code (CLI / Desktop / VS Code / JetBrains)
+### Claude Code (plugin, recommended)
+
+```bash
+/plugin marketplace add DeepCitation/skills
+/plugin install deepcitation@deepcitation-skills
+```
+
+After install, type `/verify` followed by a file, URL, or claim in any Claude Code session.
+
+### Claude Code (legacy / other CLI agents)
 
 ```bash
 npx skills add DeepCitation/skills

@@ -1,0 +1,13 @@
+{
+  "name": "deepcitation",
+  "description": "Verify AI claims against source documents with grounded citations to exact page and line numbers. PDFs, OCR'd scans, URLs, and more.",
+  "version": "0.1.0",
+  "author": {
+    "name": "DeepCitation",
+    "email": "support@deepcitation.com"
+  },
+  "homepage": "https://deepcitation.com",
+  "repository": "https://github.com/DeepCitation/skills",
+  "license": "MIT",
+  "keywords": ["verification", "citations", "research", "pdf", "ocr", "grounding"]
+}
