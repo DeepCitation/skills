@@ -313,8 +313,8 @@ Path(".deepcitation/evidence-b.txt").write_text(render_chunk(agent_b_pages))
 
 Pass each file path to the corresponding agent. Validate both files before dispatching:
 ```bash
-grep -c '<page_number_' .deepcitation/evidence-a.txt  # should equal Agent A's chunk size
-grep -c '<page_number_' .deepcitation/evidence-b.txt  # should equal Agent B's chunk size
+grep -cP '^<page_number_' .deepcitation/evidence-a.txt  # should equal Agent A's chunk size
+grep -cP '^<page_number_' .deepcitation/evidence-b.txt  # should equal Agent B's chunk size
 ```
 If either count is 0, the file is raw text and the pipeline will confabulate citations — **re-write the file with tags before dispatching**.
 
