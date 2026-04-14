@@ -11,35 +11,13 @@ Answer any question as part of the verification report — not as a standalone r
 
 ## 1. Orient — state the claim and the evidence
 
-Every `/verify` call opens with a short out-loud preamble (1–3 sentences or a 2–3 item bullet list) that names:
+Every `/verify` call opens with a short out-loud preamble sentence that clearly indicates these items:
 
 - **The claim(s)** — what specifically is being verified? Quote or briefly summarize each assertion.
-- **The evidence on the table** — which file(s), URL(s), or prior-message content is the authoritative source? List each one by name.
+- **The evidence being considered** — which file(s), URL(s), or prior-message content is the authoritative source? List each one by name.
 - **If no evidence was provided** — the official sources you plan to look up (legislation, regulator publications, standards bodies, peer-reviewed studies) and/or the local files you'll check.
 
-**Write the preamble in the same assistant turn as the Step 2 `prepare` call — do not serialize it ahead of the network work.** Text streams to the user first, so they read the preamble while `prepare` is already running. This is a CoT gate for user clarity and progress, **not** a confirmation checkpoint; do not ask for approval unless Step 2's triage table says the claims-vs-evidence split is ambiguous.
-
-**Prepare latency is asymmetric — plan parallelism accordingly:**
-
-| Evidence type | Expected `prepare` latency |
-|---|---|
-| Images, PDFs | upload time + ~0.5s (fast) |
-| URLs (web pages) | ~20–30s per URL |
-| Office files (`.docx`, `.xlsx`, `.pptx`) | ~20–30s per file |
-
-For **any slow-tier evidence** (URL or office file), the single most important UX move is to fire `prepare` immediately in the same turn as the preamble — never wait for a second assistant message, and never let the preamble delay the network work. For **mixed evidence** (e.g. a fast PDF + a slow URL), launch all sources in parallel via Step 2's `&` + `wait` pattern so the slow URL sets the wall-clock floor and the fast PDF finishes inside that same window. For **all-fast evidence**, ordering is a wash (prepare will finish in a second either way) — still fire it in the same turn as the preamble.
-
-Example (slow — URL):
-> Verifying the claim that "a coding assistant achieves 75% accuracy on a standard programming benchmark". Evidence: the vendor's technical blog post URL. URL fetches take ~20–30s — kicking off `prepare` now while you read this.
-
-Example (fast — PDF):
-> Verifying two claims from `draft.md`: (1) tenants must remove pets within two weeks, and (2) monthly rent is $2,400. Evidence: `lease.pdf` (attached). Running `prepare` now.
-
-Example (mixed — PDF + URL):
-> Verifying three claims about Q3 earnings from `memo.md`. Evidence: the 10-Q PDF (fast) and the press release URL (~25s). Launching both in parallel so the URL fetch overlaps with the PDF read.
-
-Example (no evidence supplied):
-> Verifying that California SB-253 requires Scope 3 emissions disclosure for companies with >$1B revenue. No evidence file provided — I'll look up the official California legislative text and CARB implementation guidance as primary sources.
+**Emit this preamble and call `prepare` in the same assistant turn** — text streams to the user first, so they read the preamble while `prepare` is already running. This is a CoT gate prioritizing user clarity and progress, **not** a confirmation checkpoint; do not ask for approval unless Step 2's triage table says the claims-vs-evidence split is ambiguous.
 
 ## 2. Prepare
 
@@ -57,17 +35,13 @@ A claim cannot be its own evidence.
 
 `prepare` is the **only** way to read evidence — it has built-in PDF, OCR, and web readers.
 
-Before running `prepare`, clear any stale localhost proxy that may have leaked from an expired Cowork session:
+**Never modify proxy environment variables.** Do not `unset HTTP_PROXY`, do not prefix commands with `HTTP_PROXY=""` or `NO_PROXY=...`, do not "clear stale proxies." The CLI auto-detects whatever proxy the host sets and routes correctly. Touching these variables is the single fastest way to break a working Cowork session.
 
 ```bash
-# Clear stale Cowork proxy when not in a remote sandbox
-if [ "$CLAUDE_CODE_REMOTE" != "true" ]; then
-  case "${HTTP_PROXY}${HTTPS_PROXY}" in *localhost*) unset HTTP_PROXY HTTPS_PROXY ;; esac
-fi
 npx -y deepcitation@latest prepare <file-or-url> --text > .deepcitation/<name>.txt 2>&1
 ```
 
-Multiple sources: run all in parallel with `&` + `wait`.
+Multiple sources: run each as an independent parallel `prepare` with `&` + `wait` (this is parallelism, not a retry — see hard rules below).
 
 If the output contains the phrase **"action needed"**, auth is needed — **follow the recovery options the CLI printed**. Option A (PTY via `script`) is self-sufficient for agent contexts: run it yourself, do not stop and ask the user. After completing, retry the same prepare command.
 
@@ -77,9 +51,29 @@ If the output contains **"Update available"**, run `npm install -g deepcitation@
 
 Never use `DEEPCITATION_API_KEY=...` env-var prefixing in commands. Never print key values in chat.
 
+### Hard rules — apply everywhere, sandbox or not
+
+- **No retry spirals.** If `prepare` or `verify` exits non-zero, is killed by a bash timeout, or returns an empty/truncated output file, **stop**. Do not attempt recovery by backgrounding the same command with `&`/`nohup`, wrapping it in `sleep` polling or `timeout N`, prefixing proxy overrides (`HTTP_PROXY=""`, `NO_PROXY=...`), swapping `--out` ↔ `--text`, or shrinking the input. None of these address the failure — they waste the bash budget and produce misleading partial output. Report the verbatim stdout/stderr and stop.
+- **No direct-read fallback.** If `prepare`/`verify` cannot complete, the deliverable is **not producible**. You may NOT read the source file with any other tool (`Read`, `pdfplumber`, `urllib`, web fetch, etc.) and synthesize a verified-looking answer from your own knowledge of the document. A hand-built report that mimics the verified format is worse than reporting the failure honestly — it presents unverified text as verified.
+- The one exception to the retry rule is `prepare` emitting only the 2-line proxy+filename banner with no body: retry **once** with the identical command (see `rules/cloud-sandbox-constraints.md`). If the second attempt also truncates, stop.
+
 ### Environment notes — cloud sandboxes (Claude Cowork, etc.)
 
-See [cloud-sandbox-constraints.md](rules/cloud-sandbox-constraints.md) for the full constraint set (proxy rules, timeout baselines, `__DC_ERROR__` handling, no-fallback rule). Read it once before invoking any `deepcitation` command in a Cowork/remote environment (`$CLAUDE_CODE_REMOTE == "true"`).
+Before invoking any `deepcitation` command, probe for cloud-sandbox markers. If **any** of the following is true, read [cloud-sandbox-constraints.md](rules/cloud-sandbox-constraints.md) in full before proceeding:
+
+- `$CLAUDE_CODE_REMOTE == "true"`
+- `$HTTP_PROXY` or `$HTTPS_PROXY` contains `localhost:3128` (the Cowork proxy endpoint)
+- `whoami` returns a generated adjective-color-name pattern (e.g. `jolly-vibrant-volta`, `silly-plum-turbo`)
+- A previous `Bash` call in this session was killed at ~45 s with no graceful exit
+
+Run the probe once per session:
+
+```bash
+env | grep -E '^(CLAUDE_CODE_REMOTE|HTTP_PROXY|HTTPS_PROXY)='
+whoami
+```
+
+Any hit → sandbox → load the rules file. False positives are harmless (the rules file is short and read-only); false negatives are catastrophic because the agent loses awareness of the 45 s bash timeout, the `__DC_ERROR__` protocol, and the no-fallback invariant. **Do not gate this on `$CLAUDE_CODE_REMOTE` alone** — that variable is not reliably set in every Cowork session.
 
 Read each summary file **fully** with the Read tool (no grep, no jq — read top to bottom).
 The summary contains `attachmentId` and `deepTextPages` (evidence text with
@@ -282,34 +276,67 @@ A common error is setting `k` to the prose claimText — this always fails, beca
 
 Spawn two agents simultaneously. Split the `deepTextPages` array by **page range** — Agent A gets the first half, Agent B gets the second half. Add a small overlap (2–3 pages) so both agents see shared introductory or framework sections. **Do not split by topic** — agents must only quote from their own assigned pages, which eliminates f-fabrication (the main failure mode on large documents).
 
-**How to compute the split before dispatching:**
+**How to compute the split and write tagged evidence files:**
+
+When you write `.deepcitation/evidence-a.txt` / `.deepcitation/evidence-b.txt`, each page **must** be wrapped in a `<page_number_N_index_I>` tag and its lines tagged with `<line id="K">` markers. Subagents copy these tags verbatim into `p` and `l` fields — when they're missing, the subagent has nothing to copy and will confabulate `page_id`/`line_ids` from the file's global line offset, producing citations with `pageNumber > pdfPageCount` that 404 in the viewer. The original page index (1-based) from `deepTextPages` must be preserved in the tag — do NOT renumber pages starting at 1 for each agent's chunk.
+
 ```python
+from pathlib import Path
+
 pages = data["deepTextPages"]          # list from prepare JSON
 mid = len(pages) // 2
 overlap = 2                            # shared pages at the boundary
-agent_a_pages = pages[:mid + overlap]  # pages 1 … N/2+2
-agent_b_pages = pages[mid - overlap:]  # pages N/2-2 … end
+# Keep each chunk's ORIGINAL page indices (1-based in the tag, 0-based in index_I).
+agent_a_pages = [(i + 1, pages[i]) for i in range(0, mid + overlap)]
+agent_b_pages = [(i + 1, pages[i]) for i in range(mid - overlap, len(pages))]
+
+def render_chunk(chunk):
+    parts = []
+    for page_num, page_text in chunk:
+        tagged_lines = []
+        # Include ALL lines (blank and non-blank) so idx+1 matches the CLI's 1-based line ids.
+        raw_lines = page_text.split("\n")
+        for idx, line in enumerate(raw_lines):
+            # Tag first line, last line, and every 5th line — matches the CLI renderer.
+            if idx == 0 or idx == len(raw_lines) - 1 or (idx + 1) % 5 == 0:
+                tagged_lines.append(f'<line id="{idx + 1}">{line}</line>')
+            else:
+                tagged_lines.append(line)
+        body = "\n".join(tagged_lines)
+        idx0 = page_num - 1
+        parts.append(f"<page_number_{page_num}_index_{idx0}>\n{body}\n</page_number_{page_num}_index_{idx0}>")
+    return "\n".join(parts)
+
+Path(".deepcitation/evidence-a.txt").write_text(render_chunk(agent_a_pages))
+Path(".deepcitation/evidence-b.txt").write_text(render_chunk(agent_b_pages))
 ```
-Write each range to a temp file (e.g. `.deepcitation/evidence-a.txt`, `.deepcitation/evidence-b.txt`) and pass the file path to each agent.
+
+Pass each file path to the corresponding agent. Validate both files before dispatching:
+```bash
+grep -cP '^<page_number_' .deepcitation/evidence-a.txt  # should equal Agent A's chunk size
+grep -cP '^<page_number_' .deepcitation/evidence-b.txt  # should equal Agent B's chunk size
+```
+If either count is 0, the file is raw text and the pipeline will confabulate citations — **re-write the file with tags before dispatching**.
 
 Each sub-agent prompt must include:
 - Their assigned page range (e.g. "pages 1–{mid+overlap} of {total}") and the user's original question
 - Their page range evidence text — tell the agent to **read the file** at the path you provide (do not paste the full text inline)
-- **Citation format** — two formats, same rules as §2:
-  - **Format 1** (sourceMatch reads naturally as prose): `**sourceMatch** [N]`
-  - **Format 2** (prose has its own voice): `[claimText](cite:N 'sourceMatch')`
+- **Citation format — Format 1 ONLY for verifiable citations**:
+  - The ONLY format that verifies correctly is **Format 1**: `**k** [N]` where bold text `**k**` is placed **immediately before** `[N]` with no intervening text.
+  - **Do NOT use Format 2** (`[claimText](cite:N 'k')`) for citations that must pass CLI verify — the verify CLI auto-promotes k to the display text (claimText), ignoring the tick-quoted sourceMatch. This was proven broken in alignment iter4 (55 Format 2 citations, 0 verified).
+  - Format 2 is only valid for HTML display in the web app (hydrate.ts handles it), NOT for the verify pipeline.
+  - **Correct inline pattern**: `prose context **k** [N] continuation`. If the terse sourceMatch appears mid-sentence, bold just those words, place `[N]` immediately after the closing `**`, then continue prose. Example: "the system aims to make AI systems **human intentions and values** [1] compliant." NOT: "the system aims to make AI systems **human intentions and values** compliant [1]."
 - **CITATION_DATA block** — append after body, fields in CoT order: `n`, `r`, `f`, `k`, `p`, `l`
-  - **Format 1:** `k` = the bold term (identical to claimText)
-  - **Format 2:** `k` = the tick-quoted sourceMatch — **never** the prose claimText
-  - `p` format: `page_number_N_index_I` (copy from `<page_number_N_index_I>` tags in the summary)
+  - `k` = the bold term, identical to the bold text in the body (auto-promotion makes them the same anyway)
+  - `p` format: `page_number_N_index_I` — **copy verbatim** from the nearest enclosing `<page_number_N_index_I>` tag above your quoted text in the evidence file. Never invent a page_id from a line count or file offset. If you cannot find an enclosing tag, STOP and report the evidence file as malformed — do not guess.
+  - `l` field — each line id must come from an actual `<line id="K">` tag in the same enclosing page block. For lines without an explicit tag, count from the nearest tag above (e.g. `<line id="10">` + 3 lines down = `[13]`). `l` values are **per-page**, not per-file — a 50-line page has line ids in `[1..50]`, never `[1009, 1010]`. If any `l` value exceeds the page's last `<line id>`, you are confabulating — re-locate your evidence and recount.
   - **Do NOT wrap JSON in a code fence** — `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` are the only wrappers
-  - F1 example: `{"n": 1, "r": "states invoice total", "f": "The invoice total is USD 4,350.00 for services rendered.", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]}`
-  - F2 example (body `[converts automatically](cite:2 'automatically convert')`): `{"n": 2, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "page_number_1_index_0", "l": [20, 21]}` — note `k` is tick-quoted sourceMatch, not "converts automatically"
-- **CoT gate (runs first)**: before writing any `**bold term**`, locate the sentence in the evidence that proves the claim and write it as `f` (`sourceContext`). Then extract `k` (`sourceMatch`) from that sentence. If your planned key phrase doesn't appear word-for-word in `f`, it's a paraphrase — fix `f` first, then re-derive `k`.
+  - Example: `{"n": 1, "r": "states invoice total", "f": "The invoice total is USD 4,350.00 for services rendered.", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]}`
+- **CoT gate (runs first)**: before writing any `**bold term**`, locate the sentence in the evidence that proves the claim and write it as `f` (`sourceContext`). Then extract `k` (`sourceMatch`) from that sentence. If your planned key phrase doesn't appear word-for-word in `f`, it's a paraphrase — fix `f` first, then re-derive `k`. If no short verbatim phrase in `f` can serve as `k`, bold the closest literal term that does appear word-for-word — never invent or paraphrase.
 - **Terse `sourceMatch` gate**: ask *"What 2–3 words would I Ctrl+F to find this fact in a 50-page document?"* — that is `k`. NEVER bold a full clause that restates the claim. Fact types → correct `k`: dollar amount → `USD 4,350.00`; time limit → `two (2) weeks`; priority tier → `Senior to`; trigger mechanism → `automatically convert`. If you reach 5+ words, you are citing context that belongs in prose — drop the leading quantifier/adjective, keep the noun head or key verb.
+- **[N] adjacency — HARD RULE**: `[N]` must appear **immediately after** `**k**` with zero words between. BAD: `**RLHF** trains reward models [11]`. GOOD: `**RLHF** [11] trains reward models` (prose continues after `[N]`). If the bold marker falls mid-sentence, move `[N]` to immediately follow the closing `**`, then continue prose after `[N]`.
 - **Unique citation IDs — HARD RULE**: Every `[N]` integer must be **unique** across the entire section file. Never reuse the same number for a different fact. Each new fact = new integer. If you are citing two different sentences about the same topic, assign them different n values (e.g., n=7 and n=8), not both n=7.
-- **Format 2 when bold ≠ k — HARD RULE**: Whenever your prose label is NOT the exact verbatim phrase that appears in the source sentence, you MUST use Format 2: `[prose label](cite:N 'verbatim k')`. Never bold a term that you can't Ctrl+F find word-for-word in `f`. Common cases requiring Format 2: concept names ("forward alignment", "circuit analysis"), acronym expansions ("RLHF", "DPO"), category labels ("sparse autoencoders"). Common cases for Format 1 (where bold = k verbatim): specific numbers, proper nouns, technical terms that appear word-for-word. Self-check: look at the prose label you plan to bold — does that exact phrase appear in `f`? If no → use Format 2.
-- **Bold label must equal k exactly (Format 1)**: When you DO use Format 1, the bold text `**like this**` must be word-for-word identical to the `"k"` field in CITATION_DATA. Mismatched bold/k causes auto-promotion failures during verify.
+- **Bold label must equal k exactly**: The bold text `**like this**` must be word-for-word identical to the `"k"` field in CITATION_DATA. They must match exactly — same words, same case, same punctuation.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
 - File to Write to: **Agent A → `.deepcitation/section-a.md`**, **Agent B → `.deepcitation/section-b.md`**
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.

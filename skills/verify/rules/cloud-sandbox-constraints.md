@@ -1,6 +1,6 @@
 # Cloud Sandbox Constraints (Claude Cowork, etc.)
 
-Detect via `$CLAUDE_CODE_REMOTE == "true"`. Read this once before invoking any `deepcitation` command in such an environment.
+Detect via any of: `$CLAUDE_CODE_REMOTE == "true"`, `$HTTP_PROXY`/`$HTTPS_PROXY` containing `localhost:3128`, `whoami` returning a generated adjective-color-name pattern (e.g. `jolly-vibrant-volta`), or a prior bash call being killed at ~45 s with no graceful exit. Read this file once on the first matching signal, before invoking any `deepcitation` command. Do not gate on `$CLAUDE_CODE_REMOTE` alone — it is not reliably set in every Cowork session.
 
 **The CLI is a single bundled binary.** `deepcitation` is published to npm with all of its HTTP transport (including `undici`) bundled inside. Installing additional packages (`npm install undici`, `npm install -g undici`, `npm install node-fetch`, etc.) **cannot affect** the bundled CLI's network behavior. Do not attempt this workaround under any circumstances — it will waste time and resolve nothing.
 
