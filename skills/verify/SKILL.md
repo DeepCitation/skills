@@ -17,7 +17,7 @@ Every `/verify` call opens with a short out-loud preamble sentence that clearly 
 - **The evidence being considered** — which file(s), URL(s), or prior-message content is the authoritative source? List each one by name.
 - **If no evidence was provided** — the official sources you plan to look up (legislation, regulator publications, standards bodies, peer-reviewed studies) and/or the local files you'll check.
 
-This is a CoT gate prioritizing user clarity and progress, **not** a confirmation checkpoint; do not ask for approval unless Step 2's triage table says the claims-vs-evidence split is ambiguous.
+**Emit this preamble and call `prepare` in the same assistant turn** — text streams to the user first, so they read the preamble while `prepare` is already running. This is a CoT gate prioritizing user clarity and progress, **not** a confirmation checkpoint; do not ask for approval unless Step 2's triage table says the claims-vs-evidence split is ambiguous.
 
 ## 2. Prepare
 
@@ -281,6 +281,8 @@ Spawn two agents simultaneously. Split the `deepTextPages` array by **page range
 When you write `.deepcitation/evidence-a.txt` / `.deepcitation/evidence-b.txt`, each page **must** be wrapped in a `<page_number_N_index_I>` tag and its lines tagged with `<line id="K">` markers. Subagents copy these tags verbatim into `p` and `l` fields — when they're missing, the subagent has nothing to copy and will confabulate `page_id`/`line_ids` from the file's global line offset, producing citations with `pageNumber > pdfPageCount` that 404 in the viewer. The original page index (1-based) from `deepTextPages` must be preserved in the tag — do NOT renumber pages starting at 1 for each agent's chunk.
 
 ```python
+from pathlib import Path
+
 pages = data["deepTextPages"]          # list from prepare JSON
 mid = len(pages) // 2
 overlap = 2                            # shared pages at the boundary
@@ -292,7 +294,8 @@ def render_chunk(chunk):
     parts = []
     for page_num, page_text in chunk:
         tagged_lines = []
-        raw_lines = [l for l in page_text.split("\n") if l.strip()]
+        # Include ALL lines (blank and non-blank) so idx+1 matches the CLI's 1-based line ids.
+        raw_lines = page_text.split("\n")
         for idx, line in enumerate(raw_lines):
             # Tag first line, last line, and every 5th line — matches the CLI renderer.
             if idx == 0 or idx == len(raw_lines) - 1 or (idx + 1) % 5 == 0:
@@ -308,7 +311,12 @@ Path(".deepcitation/evidence-a.txt").write_text(render_chunk(agent_a_pages))
 Path(".deepcitation/evidence-b.txt").write_text(render_chunk(agent_b_pages))
 ```
 
-Pass each file path to the corresponding agent. Validate before dispatching: `grep -c '<page_number_' .deepcitation/evidence-b.txt` should equal Agent B's chunk size. If it's 0, the file is raw text and the pipeline will confabulate citations — **re-write the file with tags before dispatching**.
+Pass each file path to the corresponding agent. Validate both files before dispatching:
+```bash
+grep -c '<page_number_' .deepcitation/evidence-a.txt  # should equal Agent A's chunk size
+grep -c '<page_number_' .deepcitation/evidence-b.txt  # should equal Agent B's chunk size
+```
+If either count is 0, the file is raw text and the pipeline will confabulate citations — **re-write the file with tags before dispatching**.
 
 Each sub-agent prompt must include:
 - Their assigned page range (e.g. "pages 1–{mid+overlap} of {total}") and the user's original question
@@ -324,9 +332,9 @@ Each sub-agent prompt must include:
   - `l` field — each line id must come from an actual `<line id="K">` tag in the same enclosing page block. For lines without an explicit tag, count from the nearest tag above (e.g. `<line id="10">` + 3 lines down = `[13]`). `l` values are **per-page**, not per-file — a 50-line page has line ids in `[1..50]`, never `[1009, 1010]`. If any `l` value exceeds the page's last `<line id>`, you are confabulating — re-locate your evidence and recount.
   - **Do NOT wrap JSON in a code fence** — `<<<CITATION_DATA>>>` / `<<<END_CITATION_DATA>>>` are the only wrappers
   - Example: `{"n": 1, "r": "states invoice total", "f": "The invoice total is USD 4,350.00 for services rendered.", "k": "USD 4,350.00", "p": "page_number_1_index_0", "l": [13, 14, 15]}`
-- **CoT gate (runs first)**: before writing any `**bold term**`, locate the sentence in the evidence that proves the claim and write it as `f` (`sourceContext`). Then extract `k` (`sourceMatch`) from that sentence. If your planned key phrase doesn't appear word-for-word in `f`, it's a paraphrase — fix `f` first, then re-derive `k`.
+- **CoT gate (runs first)**: before writing any `**bold term**`, locate the sentence in the evidence that proves the claim and write it as `f` (`sourceContext`). Then extract `k` (`sourceMatch`) from that sentence. If your planned key phrase doesn't appear word-for-word in `f`, it's a paraphrase — fix `f` first, then re-derive `k`. If no short verbatim phrase in `f` can serve as `k`, bold the closest literal term that does appear word-for-word — never invent or paraphrase.
 - **Terse `sourceMatch` gate**: ask *"What 2–3 words would I Ctrl+F to find this fact in a 50-page document?"* — that is `k`. NEVER bold a full clause that restates the claim. Fact types → correct `k`: dollar amount → `USD 4,350.00`; time limit → `two (2) weeks`; priority tier → `Senior to`; trigger mechanism → `automatically convert`. If you reach 5+ words, you are citing context that belongs in prose — drop the leading quantifier/adjective, keep the noun head or key verb.
-- **[N] adjacency — HARD RULE**: `[N]` must appear **immediately after** `**k**` with zero words between. BAD: `**RLHF** trains reward models [11]`. GOOD: `**RLHF** [11] trains reward models`. If the bold marker falls mid-sentence, move `[N]` to immediately follow the closing `**`, then continue prose after `[N]`.
+- **[N] adjacency — HARD RULE**: `[N]` must appear **immediately after** `**k**` with zero words between. BAD: `**RLHF** trains reward models [11]`. GOOD: `**RLHF** [11] trains reward models` (prose continues after `[N]`). If the bold marker falls mid-sentence, move `[N]` to immediately follow the closing `**`, then continue prose after `[N]`.
 - **Unique citation IDs — HARD RULE**: Every `[N]` integer must be **unique** across the entire section file. Never reuse the same number for a different fact. Each new fact = new integer. If you are citing two different sentences about the same topic, assign them different n values (e.g., n=7 and n=8), not both n=7.
 - **Bold label must equal k exactly**: The bold text `**like this**` must be word-for-word identical to the `"k"` field in CITATION_DATA. They must match exactly — same words, same case, same punctuation.
 - Citation ID range: **Agent A starts at 1**, **Agent B starts at 100**
