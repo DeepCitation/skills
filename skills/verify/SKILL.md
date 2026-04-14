@@ -304,7 +304,7 @@ def render_chunk(chunk):
                 tagged_lines.append(line)
         body = "\n".join(tagged_lines)
         idx0 = page_num - 1
-        parts.append(f"<page_number_{page_num}_index_{idx0}>\n{body}\n</page_number_{page_num}_index_{idx0}>\n")
+        parts.append(f"<page_number_{page_num}_index_{idx0}>\n{body}\n</page_number_{page_num}_index_{idx0}>")
     return "\n".join(parts)
 
 Path(".deepcitation/evidence-a.txt").write_text(render_chunk(agent_a_pages))
