@@ -1,5 +1,5 @@
 {
-  "name": "deepcitation-skills",
+  "name": "skills",
   "description": "DeepCitation skills for Claude Code — verify claims, audit citations, extract evidence",
   "owner": {
     "name": "DeepCitation",

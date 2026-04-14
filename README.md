@@ -12,7 +12,7 @@ Skills for AI coding agents (Claude Code, Cursor, etc.) that integrate with the 
 
 ```bash
 /plugin marketplace add DeepCitation/skills
-/plugin install deepcitation@deepcitation-skills
+/plugin install deepcitation
 ```
 
 After install, type `/verify` followed by a file, URL, or claim in any Claude Code session.
