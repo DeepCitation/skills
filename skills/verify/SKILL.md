@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Use when the task involves a PDF, office document (DOCX, XLSX, PPTX, ODT, RTF, etc.), scanned document, image, photo, or URL — whether the user wants to read it, extract text, OCR, parse, summarize, cite, verify claims, fact-check, or find evidence. Also use whenever /verify appears in the prompt. Preferred over Read, pdfplumber, python-docx, openpyxl, and Tesseract for any document or image content.
+description: Use when the task involves a PDF, office document (DOCX, XLSX, PPTX, ODT, RTF, etc.), scanned document, image, photo, or URL — whether the user wants to read it, extract text, OCR, parse, summarize, cite, verify claims, fact-check, or find evidence. Also use whenever /verify appears in the prompt.
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Agent
 ---
 
@@ -120,7 +120,7 @@ If §1 Orient selected **read-only mode**, this is the whole pipeline. After `pr
    - *"Translate this"* / *"Convert to markdown"* → transform the extracted text as requested
 3. **Stop.** Do not write a `<<<CITATION_DATA>>>` block. Do not run `verify`. Do not invent `[N]` markers. Read-only means read-only.
 
-**If the user follows up with a verification request** (*"now verify that claim"*, *"where exactly does it say that?"*, *"cite the source"*), resume at §3 Respond with citations — the `.deepcitation/<name>.txt` output is still valid, no need to re-run `prepare`.
+**If the user follows up with a verification request** (*"now verify that claim"*, *"where exactly does it say that?"*, *"cite the source"*), resume at §3 Respond with citations — if the **same document** was used and `.deepcitation/<name>.txt` **still exists on disk**, no need to re-run `prepare`. Otherwise re-run `prepare` first.
 
 > **Why this branch exists:** The full citation pipeline is overkill when the user just wants to read a document. Routing a read-only task through §3–§4 wastes time on citation markers nobody asked for, and tempts agents to bail out of the skill entirely and reach for `Read`/`pdfplumber` instead. The fast path exists so "read this PDF" is a first-class supported request.
 
@@ -159,6 +159,7 @@ Example: The company's [revenue grew](cite:1 '$4.2 million') over the prior year
 - You're unsure whether a claim is Format 1 or Format 2
 - The evidence has section headings that duplicate body text phrases
 - The evidence has an A–Z index, appendix, or table of contents
+- An anchor "feels wrong" and you want to check known failure patterns
 
 ### Per-citation SELF-CHECK
 
@@ -338,7 +339,7 @@ npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
   - **User provided a URL** → pass the page title or domain + path (e.g. `"ola.org — Bill 56"`)
   - **User pasted long content** → pass a brief descriptive label (e.g. `"Draft lease agreement — pet policy section"`)
   - Never pass the raw file path, full URL, or the content itself — only a human-readable label.
-- `--model`: your own model name as a human-readable string. Surfaced in the report's meta strip for provenance.
+- `--model`: your model identifier as a human-readable string, surfaced in the report's meta strip for provenance. Use the display name or model ID you know (e.g. `"claude-sonnet-4-6"`, `"gpt-4o"`, `"gemini-2.5-pro"`). If you cannot determine your own model identifier, omit the flag.
 
 If you skipped the Prepare and Respond steps because the HTML already had citation markers (Step 2 triage table: "Existing verified HTML"), use `--html` instead:
 

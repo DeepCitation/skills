@@ -5,6 +5,11 @@ The parent `SKILL.md` has the brief Format 1 / Format 2 summary and the three
 hard rules; this file has the truncation strategies, anti-patterns, and common
 failure modes.
 
+> **Note on cross-package paths**: references to `packages/deepcitation/docs/agents/` throughout
+> this file point to the separate `deepcitation` package (not this `skills` repo). When installing
+> this skill standalone, treat those paths as external documentation — the hard rules and
+> truncation strategies in this file are self-contained.
+
 ## When to read this file
 
 Open this file **before writing citations** whenever:

@@ -8,21 +8,22 @@ Skills for AI coding agents (Claude Code, Cursor, etc.) that integrate with the 
 
 ## Install
 
-## Agent Skills
-
-The fastest way to use DeepCitation is to install the Agent Skill /verify and ask Claude to `/verify`.
+### CLI / IDE (Claude Code)
 
 ```bash
 npx skills add DeepCitation/skills
 ```
 
-Or
+Then ask to `/verify` to verify AI claims.
+
+### claude.ai Skills
 
 1. Download [`verify.zip`](https://github.com/DeepCitation/skills/releases/download/verify-latest/verify.zip)
 2. Go to [claude.ai/customize/skills](https://claude.ai/customize/skills)
 3. Upload `verify.zip`
+4. Ask to `/verify` to verify AI claims
 
-Ask to `/verify` to verify AI claims
+Each `SKILL.md` is a self-contained Markdown file — any agent that supports reading Markdown instructions can use them directly.
 
 ## How it works
 
