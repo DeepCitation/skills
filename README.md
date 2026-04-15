@@ -8,24 +8,22 @@ Skills for AI coding agents (Claude Code, Cursor, etc.) that integrate with the 
 
 ## Install
 
-### Claude Code (CLI / Desktop / VS Code / JetBrains)
+### CLI / IDE (Claude Code)
 
 ```bash
 npx skills add DeepCitation/skills
 ```
 
-Or add it manually — in your project's `.claude/settings.json`, add the skill source path or URL.
+Then ask to `/verify` to verify AI claims.
 
-### Claude Cowork (claude.ai)
+### claude.ai Skills
 
 1. Download [`verify.zip`](https://github.com/DeepCitation/skills/releases/download/verify-latest/verify.zip)
 2. Go to [claude.ai/customize/skills](https://claude.ai/customize/skills)
 3. Upload `verify.zip`
-4. Start or join a Cowork chat, then end your message with `/verify` to verify claims against source documents
+4. Ask to `/verify` to verify AI claims
 
-### With other agents
-
-Each `SKILL.md` is a self-contained Markdown file — any agent that supports reading Markdown instructions can use them.
+Each `SKILL.md` is a self-contained Markdown file — any agent that supports reading Markdown instructions can use them directly.
 
 ## How it works
 
