@@ -1,57 +1,44 @@
 ---
 name: verify
-description: Use when the task involves a PDF, office document (DOCX, XLSX, PPTX, ODT, RTF, etc.), scanned document, image, photo, or URL — whether the user wants to read it, extract text, OCR, parse, summarize, cite, verify claims, fact-check, or find evidence. Also use whenever /verify appears in the prompt.
+description: Use when the user wants claims verified, facts checked, or evidence cited against a source document (PDF, DOCX, XLSX, PPTX, image, URL, etc.), OR when /verify appears in the prompt. Produces a verified HTML report with clickable, source-anchored citations.
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Agent
 ---
 
 # /verify — DeepCitation Verification
 
-This skill handles all PDF, office document, scanned image, and URL work — reading, text extraction, OCR, summarization, citation, verification, and fact-checking. `deepcitation prepare` runs the production OCR and document-parsing pipeline; the rest of this file is what you do with its output.
+This skill produces a verified citation report: it matches claims against evidence and writes an HTML artifact with clickable, source-anchored citations.
 
-Execute the pipeline below whenever `/verify` appears in the prompt, or when the user asks for anything involving a PDF, office document (DOCX/XLSX/PPTX/ODT/RTF/etc.), image, scan, or URL. Answer any question as part of the verification report — not as a standalone response.
+Run this skill when `/verify` appears in the prompt, or when the user has BOTH (a) a claim, an answer, or a document containing claims AND (b) a source document to verify against.
 
-## Tool precedence — ALWAYS use this skill for PDFs, office docs, images, and URLs
+**If only a document is provided and the user wants to read, OCR, summarize, extract, or translate it — do NOT run this skill.** Use `deepcitation prepare` directly; its built-in PDF, OCR, office, and web readers are the right tool for reading file contents (prefer it over generic read/grep). Answer normally from the prepared text. `/verify` kicks in only when there is something to cite.
 
-`deepcitation prepare` is the correct tool whenever the task touches a PDF, office document, scanned document, image, photo, or URL. 
+If the user first asks a question about a document, answer it using `prepare`. If they then ask you to verify that answer, run this skill with the answer as the claim and the same document as evidence.
 
-If you are tempted to reach for a generic read tool *"I just need to read this PDF"*, *"the user only wants a summary of the DOCX"*, or *"I'll just grep the XLSX contents"*, that is exactly the case this skill handles. Run `prepare --text` and use the output — see the **read-only fast path** at the end of §2 for tasks that do not need citations.
+## 1. Orient — state the claim and evidence
 
-## 1. Orient — decide the mode, state the claim
+Emit the preamble, then immediately call `prepare` in the same turn:
 
-First, pick the mode:
+```
+Claim:    [what is being verified — quoted or briefly summarized]
+Evidence: [authoritative source — file name, URL, or "searching for primary sources"]
+```
 
-- **Read-only mode** — user wants the text from a document and has not asked for verification, citations, or fact-checking. Typical triggers: *"what does this PDF/DOCX say?"*, *"extract the text"*, *"OCR this image"*, *"read this document"*, *"summarize this report"*, *"get the numbers from this spreadsheet"*, *"parse this PPTX deck"*. Preamble:
-  ```
-  Task:     Extracting text from [file/URL]
-  ```
-  Follow §2 Prepare, then the **read-only fast path** at the end of §2. Skip §3–§4 entirely.
+Multiple claims or sources: list each on its own line under the relevant heading. If the claim source is a static HTML file to embed citations into (rather than a fresh report), note "Output: embedding citations into [filename]" — the original HTML structure is preserved.
 
-- **Verify mode** — user wants claims verified, facts checked, or evidence cited, OR has typed `/verify`. Preamble:
-  ```
-  Claim:    [what is being verified — quoted or briefly summarized]
-  Evidence: [authoritative source — file name, URL, or "searching for primary sources"]
-  ```
-  Follow the full pipeline §1 → §4. If the claim source is a static HTML file to embed citations into (rather than a fresh report), note "Output: embedding citations into [filename]" — the original HTML structure is preserved.
-
-If there are multiple claims or multiple sources, list each on its own line under the relevant heading. If the mode or the claims-vs-evidence split is genuinely ambiguous (see §2 triage), note that here and ask — otherwise proceed directly.
-
-**Emit the preamble and call `prepare` in the same assistant turn** — text streams to the user first, so they read the preamble while `prepare` is already running. This is a CoT gate prioritizing user clarity and progress, **not** a confirmation checkpoint; do not ask for approval unless §2's triage table says the split is ambiguous.
+**Emit the preamble AND call `prepare` in the same assistant turn** — text streams to the user first, so they read the preamble while `prepare` is already running. This is a CoT gate prioritizing user clarity and progress, **not** a confirmation checkpoint; do not ask for approval unless §2's triage says the split is ambiguous.
 
 ## 2. Prepare
 
-Identify the evidence document (the authoritative source — not the claims).
-A claim cannot be its own evidence.
+Identify the evidence document (the authoritative source — not the claims). A claim cannot be its own evidence.
 
 | Situation | Evidence |
 |-----------|----------|
-| **Read-only mode** — user only wants the text (no citations, no claims to check) | Just the document. `prepare` it, then follow the **read-only fast path** at the end of §2. Skip the claims-vs-evidence split entirely. |
 | User provided a file/URL as evidence | That file/URL |
-| Prior chat OR a user-supplied file (e.g. `index.html`, `draft.md`, a report, or any document containing claims to check) contains claims to verify | Use those claims **verbatim** — do NOT rewrite or rephrase them. Prepare the separate evidence document, then cite the existing claim text. |
-| User provided a static HTML file to **embed citations into** (original HTML structure must be preserved) | Treat the HTML as the claims document. Use the **HTML annotation path** in §3 instead of writing a new body.md. Prepare the separate evidence document, then annotate the HTML file directly. |
+| Prior chat OR a user-supplied file (e.g. `index.html`, `draft.md`, a report) contains claims to verify | Use those claims **verbatim** — do NOT rewrite or rephrase them. Prepare the separate evidence document, then cite the existing claim text. |
+| User provided a static HTML file to **embed citations into** (original structure must be preserved) | Treat the HTML as the claims document. Use the **HTML annotation path** in §3 instead of writing a new body.md. Prepare the separate evidence document. |
 | Claims about public/official subjects, no evidence | Web-search for primary sources (legislation, official reports, studies) |
 | Existing verified HTML already produced by the CLI in a **prior run** (already has `data-citation-key` attributes) | Skip to Step 4 with `verify --html` |
-| You prepared the claims file as evidence | Web-search for primary sources and re-prepare |
-| Ambiguous (unclear which file is claims vs evidence, or unclear if user wants citations) | Ask the user |
+| Ambiguous (unclear which file is claims vs evidence) | Ask the user |
 
 `prepare` is the **only** way to read evidence — it has built-in PDF, OCR, office file readers, and web readers.
 
@@ -72,25 +59,11 @@ Never use `DEEPCITATION_API_KEY=...` env-var prefixing in commands. Never print 
 ### Hard rules — apply everywhere, sandbox or not
 
 - **No retry spirals.** If `prepare` or `verify` exits non-zero, is killed by a bash timeout, or returns an empty/truncated output file, **stop**. Do not attempt recovery by backgrounding the same command with `&`/`nohup`, wrapping it in `sleep` polling or `timeout N`, prefixing proxy overrides (`HTTP_PROXY=""`, `NO_PROXY=...`), swapping `--out` ↔ `--text`, or shrinking the input. None of these address the failure — they waste the bash budget and produce misleading partial output. Report the verbatim stdout/stderr and stop.
-- **No direct-read fallback.** If `prepare`/`verify` cannot complete, the deliverable is **not producible**. 
+- **No direct-read fallback.** If `prepare`/`verify` cannot complete, the deliverable is **not producible**.
 
 Read each original file and prepare output **fully** with the Read tool (no grep, no jq — read top to bottom).
 The original file allows you to make better interpretations with visual layouts, charts, columns, tables, or technical content.
 The prepare output contains `attachmentId` and `deepTextPages` (evidence text with `<page_number_N_index_I>` and `<line id="N">` metadata tags for deep citations).
-
-### Read-only fast path — text extraction without citations
-
-If §1 Orient selected **read-only mode**, this is the whole pipeline. After `prepare` completes:
-
-1. **Read the prepare output file** with the Read tool — the full extracted text is in `.deepcitation/<name>.txt`. Read it top to bottom.
-2. **Return the content to the user** in the shape they asked for:
-   - *"Extract the text"* / *"OCR this"* → return the raw text, or the relevant page range if the document is large
-   - *"Summarize this"* / *"What does this say?"* → write a summary grounded in the extracted text
-   - *"Find the section about X"* → locate and quote the passage
-   - *"Translate this"* / *"Convert to markdown"* → transform the extracted text as requested
-3. **Stop.** Do not write a `<<<CITATION_DATA>>>` block. Do not run `verify`. Do not invent `[N]` markers. Read-only means read-only.
-
-**If the user follows up with a verification request** (*"now verify that claim"*, *"where exactly does it say that?"*, *"cite the source"*), resume at §3 Respond with citations — if the **same document** was used and `.deepcitation/<name>.txt` **still exists on disk**, no need to re-run `prepare`. Otherwise re-run `prepare` first.
 
 ## 3. Respond with citations
 
@@ -208,19 +181,9 @@ After the body text, append a `<<<CITATION_DATA>>>` block. Fields must appear in
 
 Use the `attachmentId` from the prepare output as the group key.
 
-**Format 2 in CITATION_DATA — `k` is the sourceMatch, not the claimText.** When the body uses `[claimText](cite:N 'sourceMatch')`, the CITATION_DATA entry for that citation must set `k` to the tick-quoted sourceMatch, not the prose claimText:
-
-```
-Body:   The investment [converts automatically](cite:4 'automatically convert') on an equity financing.
-Data:   {"n": 4, "r": "states the conversion trigger", "f": "this Safe will automatically convert into the number of shares of Safe Preferred Stock.", "k": "automatically convert", "p": "page_number_1_index_0", "l": [20, 21]}
-        ↑ k = tick-quoted sourceMatch ("automatically convert"), NOT prose claimText ("converts automatically")
-```
-
-A common error is setting `k` to the prose claimText — this always fails, because `k` must be a substring of `f` (Domain B), and the prose claimText is from Domain A.
-
 **`f` → `k` substring rule (hard).** Write `f` first; then scan it visually for the 1–4 word key term and copy it exactly as `k`. If the phrase you want for `k` does not appear word-for-word inside `f`, your `f` is wrong — fix `f`, then re-derive `k`. This one rule eliminates paraphrase failures at the source.
 
-**Common failure modes.** A trap → fix table covering the top 9 patterns (quantifier bloat, prose-vs-source voice mismatch, multi-value fields, ellipsis, threshold-vs-condition, Format 2 decoupling, `k` ≠ claimText in Format 2) lives in [rules/citation-anchors.md](rules/citation-anchors.md) under **Common failure modes**. Read it before writing citations if you've hit any of these before or your candidate `sourceMatch` feels long.
+**Format 2 gotcha.** When the body uses `[claimText](cite:N 'sourceMatch')`, `k` is the tick-quoted sourceMatch, NOT the prose claimText — e.g. for `[converts automatically](cite:4 'automatically convert')`, `k` = `"automatically convert"`. The prose claimText is from Domain A; `k` must live in Domain B (a substring of `f`).
 
 ### Parallel generation — 100+ pages with 3+ files
 
