@@ -25,6 +25,8 @@ Use progressive disclosure: keep this file minimal and load focused guidance onl
   [skills/verify/SKILL.md](skills/verify/SKILL.md)
 - Working on auth handling, credential flow, or `action needed` recovery:
   [skills/verify/rules/auth.md](skills/verify/rules/auth.md)
+- Working on parallel generation, agent splitting, evidence tagging, merge failures, or 100+ page documents:
+  [skills/verify/rules/parallel-generation.md](skills/verify/rules/parallel-generation.md)
 - Working on cloud sandbox behavior, proxy rules, timeout baselines, or `__DC_ERROR__` handling:
   [skills/verify/rules/cloud-sandbox-constraints.md](skills/verify/rules/cloud-sandbox-constraints.md)
 - Working on citation field naming, domain model, `claimText`/`sourceMatch` terminology, or view states:
