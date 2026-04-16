@@ -46,7 +46,7 @@ A claim cannot be its own evidence.
 |-----------|----------|
 | **Read-only mode** — user only wants the text (no citations, no claims to check) | Just the document. `prepare` it, then follow the **read-only fast path** at the end of §2. Skip the claims-vs-evidence split entirely. |
 | User provided a file/URL as evidence | That file/URL |
-| Prior chat OR a user-supplied file (e.g. `draft.md`, or files that have made unfounded claims that need verification) contains claims to verify | Use those claims **verbatim** — do NOT rewrite or rephrase them. Prepare the separate evidence document, then cite the existing claim text. |
+| Prior chat OR a user-supplied file (e.g. `index.html`, `draft.md`, a report, or any document containing claims to check) contains claims to verify | Use those claims **verbatim** — do NOT rewrite or rephrase them. Prepare the separate evidence document, then cite the existing claim text. |
 | User provided a static HTML file to **embed citations into** (original HTML structure must be preserved) | Treat the HTML as the claims document. Use the **HTML annotation path** in §3 instead of writing a new body.md. Prepare the separate evidence document, then annotate the HTML file directly. |
 | Claims about public/official subjects, no evidence | Web-search for primary sources (legislation, official reports, studies) |
 | Existing verified HTML already produced by the CLI in a **prior run** (already has `data-citation-key` attributes) | Skip to Step 4 with `verify --html` |
@@ -56,7 +56,7 @@ A claim cannot be its own evidence.
 `prepare` is the **only** way to read evidence — it has built-in PDF, OCR, office file readers, and web readers.
 
 ```bash
-npx -y deepcitation@latest prepare <file-or-url> --text > .deepcitation/<name>.txt 2>&1
+npx -y deepcitation@latest prepare <file-or-url> > .deepcitation/<name>.txt 2>&1
 ```
 
 Multiple sources: run each as an independent parallel `prepare` with `&` + `wait` (this is parallelism, not a retry — see hard rules below).
@@ -74,10 +74,9 @@ Never use `DEEPCITATION_API_KEY=...` env-var prefixing in commands. Never print 
 - **No retry spirals.** If `prepare` or `verify` exits non-zero, is killed by a bash timeout, or returns an empty/truncated output file, **stop**. Do not attempt recovery by backgrounding the same command with `&`/`nohup`, wrapping it in `sleep` polling or `timeout N`, prefixing proxy overrides (`HTTP_PROXY=""`, `NO_PROXY=...`), swapping `--out` ↔ `--text`, or shrinking the input. None of these address the failure — they waste the bash budget and produce misleading partial output. Report the verbatim stdout/stderr and stop.
 - **No direct-read fallback.** If `prepare`/`verify` cannot complete, the deliverable is **not producible**. 
 
-Read each summary file **fully** with the Read tool (no grep, no jq — read top to bottom).
-The summary contains `attachmentId` and `deepTextPages` (evidence text with
-`<page_number_N_index_I>` and `<line id="N">` tags). Reading it into context IS the
-mechanism — having evidence text in context (even repeated) improves citation accuracy via RE2.
+Read each original file and prepare output **fully** with the Read tool (no grep, no jq — read top to bottom).
+The original file allows you to make better interpretations with visual layouts, charts, columns, tables, or technical content.
+The prepare output contains `attachmentId` and `deepTextPages` (evidence text with `<page_number_N_index_I>` and `<line id="N">` metadata tags for deep citations).
 
 ### Read-only fast path — text extraction without citations
 
@@ -92,8 +91,6 @@ If §1 Orient selected **read-only mode**, this is the whole pipeline. After `pr
 3. **Stop.** Do not write a `<<<CITATION_DATA>>>` block. Do not run `verify`. Do not invent `[N]` markers. Read-only means read-only.
 
 **If the user follows up with a verification request** (*"now verify that claim"*, *"where exactly does it say that?"*, *"cite the source"*), resume at §3 Respond with citations — if the **same document** was used and `.deepcitation/<name>.txt` **still exists on disk**, no need to re-run `prepare`. Otherwise re-run `prepare` first.
-
-> **Why this branch exists:** The full citation pipeline is overkill when the user just wants to read a document. Routing a read-only task through §3–§4 wastes time on citation markers nobody asked for, and tempts agents to bail out of the skill entirely and reach for `Read`/`pdfplumber` instead. The fast path exists so "read this PDF" is a first-class supported request.
 
 ## 3. Respond with citations
 
@@ -252,10 +249,9 @@ Structure with headings, tables, and lists matching the evidence. If evidence se
 Pick a clean output name matching the topic — the report lives in CWD, not `.deepcitation/`:
 
 ```bash
-npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
+npx -y deepcitation@latest verify --md .deepcitation/{draft}-body.md \
   --title "Descriptive Report Title" \
   --claim "The user's question or claim being verified" \
-  --model "<model-name>" \
   --out {topic}-verified.html
 ```
 
@@ -265,7 +261,6 @@ npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
   - **User provided a URL** → pass the page title or domain + path (e.g. `"ola.org — Bill 56"`)
   - **User pasted long content** → pass a brief descriptive label (e.g. `"Draft lease agreement — pet policy section"`)
   - Never pass the raw file path, full URL, or the content itself — only a human-readable label.
-- `--model`: your model identifier as a human-readable string, surfaced in the report's meta strip for provenance. Use the display name or model ID you know (e.g. `"claude-sonnet-4-6"`, `"gpt-4o"`, `"gemini-2.5-pro"`). If you cannot determine your own model identifier, omit the flag.
 
 Use `--html` when: (a) you annotated a source HTML file using the HTML annotation path in §3 (embed-into case — use `.deepcitation/{draft}-body.html`), or (b) the HTML was already produced by the CLI in a prior run (Step 2 triage: "Existing verified HTML already produced by the CLI"):
 
@@ -311,4 +306,3 @@ If any citations failed, briefly note what was claimed vs. what the source actua
 - **Citation density** — one citation per distinct claim; let the content and question drive the count. Avoid redundant citations for the same fact by reusing an existing `[N]` reference — each `n` only needs one entry in the `<<<CITATION_DATA>>>` block.
 - Never expose API keys or render internal metadata as visible content
 - Always "DeepCitation" (not "DeepCite"); always produce an HTML artifact
-
