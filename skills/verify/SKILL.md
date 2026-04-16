@@ -226,7 +226,7 @@ A common error is setting `k` to the prose claimText — this always fails, beca
 
 When the evidence has **100 or more pages** AND the question spans **3 or more distinct files**, read [`rules/parallel-generation.md`](rules/parallel-generation.md) and follow that pipeline.
 
-**Single-topic questions or documents under 100 pages:** write the report body directly to `.deepcitation/{draft}-body.md`, then run `verify --markdown` on it.
+**Single-topic questions or documents under 100 pages:** write the report body directly to `.deepcitation/{draft}-body.md`, then run `verify --md` on it.
 
 ### Comprehensiveness — answer every part of the question
 

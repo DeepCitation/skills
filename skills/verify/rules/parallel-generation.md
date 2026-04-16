@@ -1,6 +1,6 @@
 # Parallel Generation
 
-Use this pipeline when the evidence has **100 or more pages** AND the question spans **2 or more distinct topics**.
+Use this pipeline when the evidence has **100 or more pages** AND the question spans **3 or more distinct files**.
 
 ## When to use
 
@@ -84,10 +84,9 @@ After both agents complete, merge + verify in one command (renumber, citation ge
 
 ```bash
 npx -y deepcitation@latest merge --a .deepcitation/section-a.md --b .deepcitation/section-b.md --out .deepcitation/{draft}-body.md && \
-npx -y deepcitation@latest verify --markdown .deepcitation/{draft}-body.md \
+npx -y deepcitation@latest verify --md .deepcitation/{draft}-body.md \
   --title "Descriptive Report Title" \
   --claim "The user's question or claim being verified" \
-  --model "<model-name>" \
   --out {topic}-verified.html
 ```
 
