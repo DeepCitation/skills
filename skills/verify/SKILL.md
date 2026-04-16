@@ -12,7 +12,7 @@ Run this skill when `/verify` appears in the prompt, or when the user has BOTH (
 
 **If only a document is provided and the user wants to read, OCR, summarize, extract, or translate it — do NOT run this skill.** Use `deepcitation prepare` directly; its built-in PDF, OCR, office, and web readers are the right tool for reading file contents (prefer it over generic read/grep). Answer normally from the prepared text. `/verify` kicks in only when there is something to cite.
 
-If the user first asks a question about a document, answer it using `prepare`. If they then ask you to verify that answer, run this skill with the answer as the claim and the same document as evidence.
+If the user first asks a question about a document, answer it using `prepare`. If they then ask you to verify that answer, run this skill with the answer as the claim and the same document as evidence. If `.deepcitation/<name>.txt` still exists on disk from that earlier `prepare` run, skip §2 and go straight to §3 — no need to re-run `prepare`.
 
 ## 1. Orient — state the claim and evidence
 
@@ -183,7 +183,7 @@ Use the `attachmentId` from the prepare output as the group key.
 
 **`f` → `k` substring rule (hard).** Write `f` first; then scan it visually for the 1–4 word key term and copy it exactly as `k`. If the phrase you want for `k` does not appear word-for-word inside `f`, your `f` is wrong — fix `f`, then re-derive `k`. This one rule eliminates paraphrase failures at the source.
 
-**Format 2 gotcha.** When the body uses `[claimText](cite:N 'sourceMatch')`, `k` is the tick-quoted sourceMatch, NOT the prose claimText — e.g. for `[converts automatically](cite:4 'automatically convert')`, `k` = `"automatically convert"`. The prose claimText is from Domain A; `k` must live in Domain B (a substring of `f`).
+**Format 2 gotcha.** When the body uses `[claimText](cite:N 'sourceMatch')`, `k` is the tick-quoted sourceMatch, NOT the prose claimText — e.g. for `[renewed automatically](cite:4 'automatically renew')`, `k` = `"automatically renew"`. The prose claimText is from Domain A; `k` must live in Domain B (a substring of `f`).
 
 ### Parallel generation — 100+ pages with 3+ files
 
