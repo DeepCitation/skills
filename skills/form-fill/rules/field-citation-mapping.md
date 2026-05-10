@@ -96,7 +96,7 @@ Citation data: `{"n": 13, "r": "specialist finding on executive function", "f": 
 Some form fields ask for the physician's professional judgment (e.g., "Describe the patient's prognosis in your own words"). Draft these with the supporting evidence cited, but mark them as requiring physician input:
 
 ```
-**Physician's Assessment of Prognosis**: Based on the documented treatment history showing **three failed medication trials** [14] and specialist opinion that the condition is **unlikely to remit** [15], the prognosis for return to baseline functioning is poor. ⚠ *Requires physician's independent clinical judgment to finalize.*
+**Physician's Assessment of Prognosis**: Based on the documented treatment history showing **three failed medication trials** [14] and specialist opinion that the condition is **unlikely to remit** [15], the prognosis for return to baseline functioning is poor. [Physician Judgment]
 ```
 
 ## What Does NOT Need Citations

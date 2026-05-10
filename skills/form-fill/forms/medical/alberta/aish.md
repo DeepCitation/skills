@@ -85,7 +85,7 @@ If the medical evidence supports all three, say so explicitly using these terms.
 - **Source**: Provided by the signing physician during the intake checklist (§1 of SKILL.md)
 - **Citations**: Not required — this is attestation, not evidence
 - **Note**: Draft the declaration text but mark it clearly as requiring the physician's review and signature. Include a placeholder for the signature line.
-- **Physician judgment fields**: If the form asks "In your clinical opinion, is this condition permanent?", draft the answer based on the evidence but flag it: "⚠ Requires physician's independent clinical judgment"
+- **Physician judgment fields**: If the form asks "In your clinical opinion, is this condition permanent?", draft the answer based on the evidence and mark it with `[Physician Judgment]`
 
 ## Source Hints — Where to Look
 

@@ -126,7 +126,7 @@ For sections where evidence is insufficient:
 - Keep missing facts outside `Copy to form`
 - Mark the field in `Missing source data` as "Not found in records — requires physician input"
 - Never fabricate or guess. An unfilled field is always better than a fabricated answer.
-- For fields requiring clinical judgment: draft the best supported answer when evidence exists, then add "Requires physician's independent clinical judgment" in `Review required`
+- For fields requiring clinical judgment: draft the best supported answer when evidence exists, then add `[Physician Judgment]` in `Review required`
 
 ## Phase 4: Review — self-check against form spec
 
@@ -167,5 +167,5 @@ Mark all plan tasks as "done".
 - **Never log PII** — patient names, health numbers, diagnoses stay in the draft only
 - **Cite every medical fact** — dx codes, dates, limitations, prognosis, lab values, medications. Demographics (name, address) are exempt.
 - **Keep copy blocks clean** — citations, missing-data markers, review caveats, and source labels belong outside `Copy to form`
-- **Physician judgment overlay** — fields asking for clinical opinion get evidence citations + "⚠ Requires physician's independent clinical judgment"
+- **Physician judgment overlay** — fields asking for clinical opinion get evidence citations + `[Physician Judgment]`
 - **plan_update is your progress heartbeat** — the user sees nothing while you read files. The plan task status is the only signal that you are still working. Update it before every major step.
