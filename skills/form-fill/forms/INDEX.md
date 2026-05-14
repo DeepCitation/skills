@@ -19,6 +19,9 @@ description: Index of supported form types for /form-fill skill
 | `alberta-std-sunlife` | Sun Life — Disability Claim Medical Report (STD) | [medical/alberta/std-sunlife.md](medical/alberta/std-sunlife.md) | Alberta, Canada | Insurance (Sun Life) | Active |
 | `alberta-ltd-canadalife` | Canada Life — Attending Physician Statement (LTD) | [medical/alberta/ltd-canadalife.md](medical/alberta/ltd-canadalife.md) | Alberta, Canada | Insurance (Canada Life) | Active |
 | `alberta-std-canadalife` | Canada Life — Attending Physician Statement (STD) | [medical/alberta/std-canadalife.md](medical/alberta/std-canadalife.md) | Alberta, Canada | Insurance (Canada Life) | Active |
+| `ontario-odsp` | ODSP Disability Determination Package (2859E) | [medical/ontario/odsp.md](medical/ontario/odsp.md) | Ontario, Canada | Provincial disability | Active |
+| `ontario-wsib-form8` | WSIB Health Professional's Report (Form 8 / 0008A) | [medical/ontario/wsib-form8.md](medical/ontario/wsib-form8.md) | Ontario, Canada | Workplace injury | Active |
+| `ontario-wsib-faf` | WSIB Functional Abilities Form (FAF / 2647A) | [medical/ontario/wsib-faf.md](medical/ontario/wsib-faf.md) | Ontario, Canada | Workplace injury | Active |
 
 ## Selecting a form
 
@@ -36,6 +39,9 @@ Match the user's description to the table above. Common aliases:
 - "Sun Life STD", "SLF STD" → `alberta-std-sunlife`
 - "Canada Life LTD", "Great-West LTD", "GWL LTD" → `alberta-ltd-canadalife`
 - "Canada Life STD", "Great-West STD", "GWL STD" → `alberta-std-canadalife`
+- "ODSP", "Ontario disability", "disability determination package", "DDP", "2859E" → `ontario-odsp`
+- "WSIB Form 8", "Form 8", "health professional's report", "0008A" → `ontario-wsib-form8`
+- "WSIB FAF", "functional abilities form", "FAF", "2647A" → `ontario-wsib-faf`
 
 If the user names an insurer without specifying LTD or STD, ask which benefit period the claim is for.
 
@@ -57,7 +63,10 @@ forms/
 │   │   ├── ltd.md
 │   │   └── std.md
 │   ├── bc/            # future: British Columbia forms
-│   └── ontario/       # future: Ontario forms
+│   └── ontario/
+│       ├── odsp.md
+│       ├── wsib-form8.md
+│       └── wsib-faf.md
 ├── legal/             # future: legal forms
 └── insurance/         # future: standalone insurance forms
 ```

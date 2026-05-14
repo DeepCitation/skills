@@ -99,7 +99,9 @@ Some form fields ask for the physician's professional judgment (e.g., "Describe 
 **Physician's Assessment of Prognosis**: Based on the documented treatment history showing **three failed medication trials** [14] and specialist opinion that the condition is **unlikely to remit** [15], the prognosis for return to baseline functioning is poor. [Physician Judgment]
 ```
 
-## What Does NOT Need Citations
+## What Does NOT Need Citations By Default
+
+These defaults apply only when the active form/workflow spec does not require a citation. A concrete workflow spec wins over this list. If a workflow requires cited patient-name variants, demographics, administrative identifiers, or exact form-section anchors, cite them exactly as required.
 
 - **Patient-provided demographics**: Name, address, phone number, emergency contact — these come from the patient directly, not from clinical records
 - **Policy/employer information**: Group number, employer name, job title — provided by the patient or employer
