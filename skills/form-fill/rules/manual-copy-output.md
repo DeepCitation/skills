@@ -37,7 +37,6 @@ The final readiness summary should include one overall status plus short action 
 Do not include these inside `Copy to form`:
 
 - citation markers such as `[1]`
-- `[Missing]`
 - source labels such as `[Patient Chart]`
 - tool or system notes
 - review caveats

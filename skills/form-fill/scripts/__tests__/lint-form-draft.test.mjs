@@ -18,7 +18,7 @@ John Doe
 **Evidence**
 
 **Missing source data**
-Date of birth: [Missing]
+Date of birth was not found in the provided records.
 
 ## Part B: Medical Practitioner Information
 
@@ -111,7 +111,7 @@ assert.equal(validResult.status, "pass", JSON.stringify(validResult, null, 2));
 
 const dirtyCopyDraft = validDraft.replace(
   "Patient experiences shortness of breath with assisted ambulation and requires support for walking-related daily activities.",
-  "Patient experiences shortness of breath with assisted ambulation [5] [Physician Judgment Required].",
+  "Patient experiences shortness of breath with assisted ambulation [5]; physician must confirm severity.",
 );
 const dirtyResult = lintFormDraft(dirtyCopyDraft, { form: "canada-dtc" });
 assert.equal(dirtyResult.status, "fail");

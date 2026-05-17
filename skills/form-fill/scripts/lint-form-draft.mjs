@@ -33,8 +33,8 @@ const FINAL_SUMMARY_BUCKETS = [
 
 const COPY_BLOCK_FORBIDDEN = [
   { rule: "COPY_BLOCK_HAS_CITATION", pattern: /\[\d+\]/ },
-  { rule: "COPY_BLOCK_HAS_MISSING", pattern: /\[Missing\]/i },
-  { rule: "COPY_BLOCK_HAS_REVIEW_FLAG", pattern: /\[Physician Judgment Required\]|Requires physician/i },
+  { rule: "COPY_BLOCK_HAS_UNDOCUMENTED", pattern: /not documented in the available records/i },
+  { rule: "COPY_BLOCK_HAS_REVIEW_FLAG", pattern: /\bphysician must confirm\b|\bpending physician confirmation\b|\brequires physician\b/i },
   { rule: "COPY_BLOCK_HAS_SOURCE_LABEL", pattern: /\[(?:Patient Chart|Doctor Profile|Physician Profile|MetadataDate|Source|Attachment)[^\]]*\]/i },
   { rule: "COPY_BLOCK_HAS_TOOL_LEAK", pattern: /\b(?:read_file|list_files|plan_write|plan_update|tool call|metadata tagged)\b/i },
 ];
@@ -127,10 +127,6 @@ function lintFieldSection(section, failedRules, warnings) {
         finding(forbidden.rule, section.title, "`Copy to form` contains content that belongs in Evidence, Review required, or Missing source data."),
       );
     }
-  }
-
-  if (/\[Missing\]/i.test(section.body) && !/\*\*Missing source data\*\*/i.test(section.body)) {
-    failedRules.push(finding("MISSING_OUTSIDE_COPY", section.title, "Missing facts must be listed in `Missing source data`."));
   }
 
   if (copy.trim() && PATIENT_MEDICAL_PATTERN.test(copy) && !evidence.trim()) {
