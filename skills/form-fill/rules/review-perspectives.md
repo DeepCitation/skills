@@ -5,7 +5,7 @@ This file contains the full prompt templates for the three review subagents spaw
 ## Shared Context (include in all three agent prompts)
 
 Tell each agent to read:
-1. The form spec — `skills/form-fill/forms/medical/<region>/<type>.md`
+1. The active form spec — the structured spec for the form being filled (provided to the workflow at runtime)
 2. The manual-copy output contract — `skills/form-fill/rules/manual-copy-output.md`
 3. The completed draft — `.deepcitation/form-draft.md`
 4. All prepared evidence files — `.deepcitation/<name>.txt`
