@@ -1,112 +1,125 @@
 ---
 name: verify
-description: Use when the user wants claims verified, facts checked, or evidence cited against a source document (PDF, DOCX, XLSX, PPTX, image, URL, etc.), OR when /verify appears in the prompt. Reads evidence with DeepCitation, anchors each citation to a page/line, and opens a confidence-badged annotated report the user reviews in the browser.
+description: Use when the user wants claims verified, facts checked, or evidence cited against a source document (PDF, DOCX, XLSX, PPTX, image, URL, etc.), OR when /verify appears in the prompt. Reads evidence with DeepCitation, embeds DeepCitation's live interactive citations into a clean HTML report, and opens it in lavish-axi so the user can inspect each source and comment back.
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Agent
 ---
 
-# /verify — DeepCitation-anchored, human-reviewable verification
+# /verify — a readable report with DeepCitation's live citations, reviewable in lavish
 
-This skill verifies claims against a source, then opens a **lavish annotated report** the user
-reviews live: every citation carries a confidence badge, and the user clicks or selects any text
-to flag it. Flagged or low-confidence citations escalate to an adversarial judge panel, the report
-re-renders, and the loop runs until the user ends the session.
+This skill answers a question (or checks claims) against a source, then delivers a **well-made HTML
+report whose citations are DeepCitation's own interactive citations** — click one and the user sees
+the actual source: the matched phrase, the evidence keyhole crop, the page view. The report opens in
+**lavish-axi**, so the user can also pin any claim and comment or question it back to the agent.
 
-**DeepCitation is the verification backend.** `deepcitation prepare` is the only evidence reader;
-the model then anchors each `sourceMatch` to a page/line against the tagged prepare text — that
-self-derivation **is** the coordinate match (no second locating call). **lavish-axi renders the
-report** and drives the review loop. We do not use DeepCitation to render the final HTML.
+Two runtimes, one file, each doing what it is best at:
+
+- **DeepCitation owns verification and the citation UX.** `prepare` reads the evidence; `verify --html`
+  decides each citation's status and **embeds the interactive popover runtime** (badge state, evidence
+  keyhole, page view, variance) into the report. We never invent a verification UI or a score.
+- **lavish-axi owns the report shell and the review loop.** It makes the HTML nice and runs the
+  annotate → poll → reply round-trip. We never rebuild DeepCitation's citation rendering inside it.
+
+> **Verification is woven in, not the show.** Users *scan* citations, they do not read them. The report
+> is a good report; the citations happen to be live. Do not build a "verification report" with a hero
+> banner, score, or dashboard. See [`packages/deepcitation/docs/agents/deep-citation-concepts.md`](../../../deepcitation/docs/agents/deep-citation-concepts.md).
 
 ## When to run
 
-Run when `/verify` is in the prompt, or when the user has BOTH (a) a claim/answer/document with
-claims AND (b) a source to verify against. **If the user only wants to read, OCR, summarize, or
-translate a document, do NOT run this skill** — call `deepcitation prepare` directly and answer
-normally. /verify kicks in only when there is something to cite.
+Run when `/verify` is in the prompt, or when the user has BOTH (a) a claim/answer/document with claims
+AND (b) a source to verify against. **If the user only wants to read, OCR, summarize, or translate a
+document, do NOT run this skill** — call `deepcitation prepare` directly and answer normally. /verify is
+for when there is something to cite. If `.deepcitation/<name>.json` already exists from an earlier
+`prepare`, skip step 2.
 
-If `.deepcitation/<name>.json` already exists from an earlier `prepare`, skip step 2.
+## The verification model (use DeepCitation's, never invent one)
+
+Status is **discrete and decided by the match**, never a confidence score:
+
+| Badge state | Meaning | Comes from |
+|---|---|---|
+| `verified` | `sourceMatch` located; `isVerbatim` | exact match in the source |
+| `variance` | located but the wording differs ("FREE" vs "$0.00", "roughly half" vs "50%") | `isVerbatim === false` → `varianceFootnote` reconciles the two strings |
+| `unverified` | not found in the source | no located match |
+| `pending` | verification still resolving | in-flight |
+
+`verify --html` assigns these. **Never** add a percentage, a "confidence", a star rating, or a parallel
+status of your own. The substring-collapse rule and Format 1/2 anchor rules live unchanged in
+[rules/citation-anchors.md](rules/citation-anchors.md).
 
 ## Workflow
 
-1. **Orient.** Emit the preamble (`Claim:` / `Evidence:` on their own lines), then call `prepare`
-   in the same turn. Choose the run-time roster tier per [rules/runtime-roster.md](rules/runtime-roster.md).
-   A claim cannot be its own evidence; if it is unclear which file is claims vs. evidence, ask.
+1. **Orient.** Emit the preamble (`Claim:` / `Evidence:` on their own lines), then call `prepare` in the
+   same turn. A claim cannot be its own evidence; if it is unclear which file is claims vs. evidence, ask.
 
-2. **Prepare evidence.** `prepare` is the only reader — built-in PDF/OCR/office/web. It writes the
-   prepared JSON payload to **stdout** and its status lines (`Using proxy:`, `Preparing file:`, …)
-   to **stderr** — redirect stdout only. **Never `2>&1`**: it interleaves stderr log lines into
-   the JSON (corrupting a later read/parse) and hides the live sandbox signals.
+2. **Prepare evidence.** `prepare` is the only reader — built-in PDF/OCR/office/web. It writes the JSON
+   payload to **stdout** and status lines to **stderr** — redirect stdout only, **never `2>&1`** (it
+   corrupts the JSON and hides sandbox signals).
    ```bash
    mkdir -p .deepcitation .lavish
    npx -y deepcitation@latest prepare <file-or-url> > .deepcitation/<name>.json
    ```
-   Multiple sources: one parallel `prepare` each (`&` + `wait`). The default JSON output carries
-   `attachmentId` plus `deepTextPages` with `<page_number_N_index_I>` / `<line id="K">` tags. On
-   **"action needed"** follow [rules/auth.md](rules/auth.md); on sandbox/network behavior see
-   [rules/cloud-sandbox-constraints.md](rules/cloud-sandbox-constraints.md). Never
-   `DEEPCITATION_API_KEY=` prefix; never print keys. Read the original file and prepare output
-   fully (top to bottom) before authoring.
+   Multiple sources: one parallel `prepare` each (`&` + `wait`). On **"action needed"** follow
+   [rules/auth.md](rules/auth.md); on sandbox/network behavior see
+   [rules/cloud-sandbox-constraints.md](rules/cloud-sandbox-constraints.md). Never `DEEPCITATION_API_KEY=`
+   prefix; never print keys. Read the original file and the prepare output fully before authoring.
 
-3. **Author + coordinate-match.** Write the cited narrative and, for each fact, the anchor record
-   `{ n, r, f, k, p, l }` against the tagged prepare text — `f→k` substring + `p`/`l` page/line.
-   **This model self-derivation is the coordinate match, and it is the single locating authority** —
-   no `deepcitation verify` call re-locates the anchor. All `k`/`l`/`f` and Format 1/2 hard rules
-   live unchanged in [rules/citation-anchors.md](rules/citation-anchors.md). For 100+ pages across
-   3+ files, split the work per [rules/parallel-generation.md](rules/parallel-generation.md)
-   (Format 1 only for anchors; subagents emit per-section bodies + `<<<CITATION_DATA>>>`, the main
-   loop assembles them into the lavish artifact).
+3. **Author the report.** Pick the shape the *answer* needs and open lavish's own playbook + design for
+   it (`npx -y lavish-axi playbook <id>` — e.g. `table` for tabular findings, `comparison`, `plan` — and
+   `npx -y lavish-axi design`). Write the answer as a clean, lavish-styled HTML document to
+   `.lavish/<topic>-verify.html`, wrap each cited phrase in a `data-cite="N"` element, and append a
+   `<<<CITATION_DATA>>>` block (`n, r, f, k, p, l` in CoT order). The answer is the deliverable; citations
+   are inline and scannable. **DeepCitation's popover is the evidence surface — do NOT build a separate
+   evidence table, status grid, or discrepancy list; that re-presents what the live citation already
+   shows.** For 100+ pages across 3+ files, split per [rules/parallel-generation.md](rules/parallel-generation.md)
+   (subagents emit per-section bodies + `<<<CITATION_DATA>>>`; the main loop assembles one report).
 
-4. **Cheap audit → badges.** Before the first render, run the cheap auditor (fast tier) over the
-   citations — **batched per attachment, not one call per citation** — to assign
-   `verified | review | contradicted` plus a confidence. See the tiered trigger and rubric in
-   [rules/runtime-roster.md](rules/runtime-roster.md). Never show a badge a citation did not earn;
-   a citation with no located `p`/`l` anchor is never `verified` — it badges `unmatched`
-   deterministically (no panel).
+4. **Embed live citations.** Run `verify --html` once — it verifies against the source, replaces each
+   `data-cite` with a hashed `data-citation-key`, and injects DeepCitation's runtime (badge, evidence
+   keyhole, page view, variance) **into your report, styling preserved**.
+   ```bash
+   npx -y deepcitation@latest verify --html .lavish/<topic>-verify.html \
+     --title "Descriptive Report Title" --claim "the question or claim verified" \
+     --out .lavish/<topic>-verify.html
+   ```
+   Run verify ONCE; the API handles partial matches and flags unmatched anchors in its summary.
 
-5. **Build the lavish report.** Pick the surface, open its playbook
-   (`npx -y lavish-axi playbook <id>` + `npx -y lavish-axi design`) **before** writing HTML, and
-   render to a stable path `.lavish/<topic>-verify.html`:
-   - hero (default): [playbooks/annotated-report.md](playbooks/annotated-report.md)
-   - secondary: [playbooks/evidence-table.md](playbooks/evidence-table.md)
-   - secondary: [playbooks/discrepancy-report.md](playbooks/discrepancy-report.md)
+5. **Make it reviewable + open.** Ensure the lavish-axi SDK is wired and that `[data-citation-key]`
+   elements are **excluded from lavish's click-to-annotate** (a citation click opens DeepCitation's
+   popover; clicking/selecting the surrounding prose starts a lavish comment) — contract in
+   [rules/lavish-loop.md](rules/lavish-loop.md). Then open with the layout gate and fix every
+   `layout_warning` before involving the user:
+   ```bash
+   npx -y lavish-axi .lavish/<topic>-verify.html
+   ```
 
-   The report is the deliverable, so unclamp before writing — clamp placeholders must never reach
-   the file. Strip the `<<<CITATION_DATA>>>` block before it ships.
+6. **Poll loop.** `npx -y lavish-axi poll .lavish/<topic>-verify.html` — long-running; run it as a
+   background task and re-run if killed (queued feedback is never lost). The user reads, clicks citations
+   to inspect the source, and comments/questions specifics. Parse each returned prompt: element click vs.
+   `target.type === "text-range"` (whose `target.text` is the exact flagged bytes).
 
-6. **Open with the layout gate.** `npx -y lavish-axi .lavish/<topic>-verify.html`. Fix every
-   `layout_warning` (overflow/clipped/overlap) **before** involving the user.
+7. **Revise on feedback.** The user's comment is the signal — there is no judge panel. Apply it (fix a
+   claim, re-anchor a citation, or `prepare` a better source), then re-run step 4 on the **same** file
+   path (the session is keyed by path) and reply:
+   ```bash
+   npx -y lavish-axi poll .lavish/<topic>-verify.html --agent-reply "<one line on what changed>"
+   ```
 
-7. **Poll loop.** `npx -y lavish-axi poll .lavish/<topic>-verify.html` — long-running by design;
-   run it as a background task and re-run if killed (queued feedback is never lost). Parse each
-   returned prompt: element click vs. `target.type === "text-range"` (whose `target.text` is the
-   exact flagged bytes). Full command contract in [rules/lavish-loop.md](rules/lavish-loop.md).
-
-8. **Escalate on flag or semantic dispute.** Run the 3-vote adversarial judge panel + editor per
-   [rules/runtime-roster.md](rules/runtime-roster.md) only for: any citation the user flagged, OR a
-   `weak`/`contradicted` cheap-audit verdict. A merely `unmatched` anchor badges deterministically
-   and does **not** auto-escalate (the panel cannot locate what the substring match could not); it
-   re-anchors only when the user asks. High-confidence, unflagged citations do not re-run.
-
-9. **Revise + re-render.** Apply the editor's verdicts, rewrite the **same** file path (the
-   session is keyed by path), then `poll <file> --agent-reply "<one line on what changed>"`.
-
-10. **End.** When the user ends the session: `npx -y lavish-axi end <file>` then
-    `npx -y lavish-axi stop`.
+8. **End.** When the user ends the session: `npx -y lavish-axi end <file>` then `npx -y lavish-axi stop`.
 
 ## Invariants
 
-- **DeepCitation is the only evidence reader.** No direct-read fallback (no pdfplumber/urllib). If
-  `prepare` cannot complete, the deliverable is not producible — show the error and stop.
-- **One locating authority.** The model's `f→k` / `p`/`l` derivation against the tagged prepare
-  text is the coordinate match; do not run a separate `deepcitation verify` locate. The auditor and
-  panel re-confirm `k` is a verbatim substring of the `<line>`-tagged source text — they do not
-  re-locate it.
-- **Every badge traces to an anchor.** Never mark a citation `verified` without a located `p`/`l`,
-  and never show higher confidence than the audit/panel earned. `review` is the honest default for
-  low confidence; the panel upgrades it — the user never sees false green.
-- **Never fabricate citations** when auth or network fails. Show the error and stop.
-- **lavish renders; we re-render every loop.** Keep the same `.lavish/<topic>-verify.html` path so
-  the session, scroll, and annotations persist. Use only real verbs:
-  `lavish-axi <file> | poll | end | stop | playbook | design`. `--timeout-ms` is test-only.
+- **DeepCitation owns verification and the citation UX.** `prepare` reads; `verify --html` decides status
+  and renders the interactive citation. Never hand-build a citation popover, badge, or evidence view.
+- **No confidence — ever.** Status is the discrete `verificationBadge` state (`verified` / `variance` /
+  `unverified` / `pending`) from the match. No scores, percentages, or invented parallel status.
+- **Don't over-emphasize verification.** It is a good report whose citations are live. No hero banner,
+  no score dashboard, no "trust" framing. Verification scans; evidence is on-demand in the popover.
+- **lavish = report shell + review loop only.** It makes the HTML nice and runs annotate→poll→reply;
+  exclude `[data-citation-key]` from its click capture so it never hijacks a citation.
+- **DeepCitation is the only evidence reader.** No direct-read fallback. If `prepare` or `verify` cannot
+  complete, the deliverable is not producible — show the error and stop. Never fabricate citations.
+- Use only real lavish verbs: `lavish-axi <file> | poll | end | stop | playbook | design`
+  (`--timeout-ms` is test-only). Use only real DeepCitation commands: `prepare`, `verify --html`, `auth`.
 - **Format 1 for anything that must anchor** (Format 2 auto-promotes `k` and breaks verification).
 - Auth is `deepcitation auth`; never `DEEPCITATION_API_KEY=` prefix; never print keys.
-- Always "DeepCitation" (never "DeepCite"). Always deliver the annotated report.
+- Always "DeepCitation" (never "DeepCite"). Always deliver the report.

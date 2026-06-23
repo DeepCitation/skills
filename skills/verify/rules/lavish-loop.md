@@ -1,7 +1,14 @@
-# lavish-axi loop — command contract
+# lavish-axi loop — styling shell, embed, and review loop
 
-lavish-axi renders the annotated report and runs the annotate→poll→reply loop. Use **only** these
-verbs and flags; do not invent others.
+**Division of labor (do not blur it):**
+
+- **lavish-axi** owns the **report styling** (a clean, well-laid-out HTML shell via its design system +
+  playbooks) and the **review loop** (annotate → poll → reply on any specific the user picks).
+- **DeepCitation** owns **verification and the citation components**: `verify --html` embeds a runtime
+  that turns each cited phrase into an interactive element the user clicks to review status, matched
+  text, the evidence keyhole, the page view, and any variance. We never restyle or reimplement that.
+
+Use **only** these lavish verbs/flags; do not invent others.
 
 | Command | Use |
 |---|---|
@@ -9,85 +16,83 @@ verbs and flags; do not invent others.
 | `npx -y lavish-axi poll <file.html>` | Long-poll until the user acts or the browser reports fresh `layout_warnings`. `--agent-reply "<msg>"` posts a chat reply before polling. `--timeout-ms` is **test-only** — never pass it in normal use. |
 | `npx -y lavish-axi end <file.html>` | End the session (user is done). |
 | `npx -y lavish-axi stop` | Shut the background server. |
-| `npx -y lavish-axi playbook [id]` | Guidance for an artifact type: `diagram, table, comparison, plan, code, input, slides`. |
+| `npx -y lavish-axi playbook [id]` | Guidance for a content shape: `diagram, table, comparison, plan, code, input, slides`. Pick the one the **answer** needs; citations embed wherever the content puts them. |
 | `npx -y lavish-axi design` | Design-system guidance (Tailwind v4 + DaisyUI v5 CDN, `data-theme="luxury"`, layout-safety CSS). |
+
+## Embed DeepCitation into the styled report
+
+1. Author the answer as a lavish-styled HTML document (step 3 of SKILL.md), wrapping each cited phrase
+   in a `data-cite="N"` element and appending the `<<<CITATION_DATA>>>` block.
+2. `verify --html` verifies against the source, replaces each `data-cite` with a hashed
+   `data-citation-key`, injects `#dc-data` + scoped CSS + the runtime, and returns **your HTML with its
+   styling intact**. The runtime's CSS is low-specificity (`:where(...)`, `data-dc-*`) and does not
+   fight Tailwind/DaisyUI.
+3. **Coexistence — keep citation clicks away from lavish.** The DeepCitation runtime binds clicks on
+   `[data-citation-key]`; lavish must treat those elements as interactive (not annotation targets) so a
+   citation click opens the DeepCitation popover instead of starting a comment. Mark each cited element
+   as lavish-excluded (the same way custom interactive controls opt out, e.g. `data-lavish-action` on
+   the cited span — confirm against lavish's `artifact-sdk.js` control detection). Everything else
+   (prose, headings, table cells) stays freely commentable.
 
 ## Session identity = canonical file path
 
 Sessions are keyed by the **canonical absolute file path**, not an opaque id. Write the report to a
 stable path (`.lavish/<topic>-verify.html`) and **never rename it between iterations** — renaming
 starts a new session and loses queued feedback and scroll position. Re-rendering = rewrite the same
-path; the watcher hot-reloads the browser.
+path (re-run `verify --html` onto it); the watcher hot-reloads the browser.
 
-## Open + layout gate (before the human)
+## Open + layout gate (before the user)
 
 1. `npx -y lavish-axi <file>` opens and runs the layout curtain. Its `next_step` tells you: do not
    reply to the user yet — run `poll` next.
-2. If `poll` returns `layout_warnings` (overflow / clipped text / overlapping content), **fix them
-   and rewrite the file before involving the user.** The gate re-arms on each write and clears
-   after the next clean audit. The layout-safety CSS in every playbook pre-empts most warnings.
-   Use `--no-gate` only when re-opening an artifact you already verified clean (and in tests).
+2. If `poll` returns `layout_warnings` (overflow / clipped text / overlapping content), **fix them and
+   rewrite the file before involving the user.** The gate re-arms on each write and clears after the
+   next clean audit. Use `--no-gate` only when re-opening an artifact you already verified clean.
 
 ## Poll (long-running, background, re-runnable)
 
 - `poll` stays silent until the user sends feedback, ends the session, or the browser reports fresh
   `layout_warnings`. **This is normal — never treat the silence as hung.**
-- **Liveness signal:** a no-timeout poll writes an immediate waiting banner and then a per-minute
-  stderr line (`[lavish-axi] Still waiting for user feedback (Nm)…`). Stdout stays reserved for the
-  final JSON response. Those stderr heartbeats are how you know the poll is alive; if they stop and
-  no JSON arrived, the process was killed — **just re-run the same poll command** (queued feedback
-  persists).
+- **Liveness signal:** a no-timeout poll writes an immediate waiting banner and then a per-minute stderr
+  line (`[lavish-axi] Still waiting for user feedback (Nm)…`). Stdout stays reserved for the final JSON.
+  If the heartbeats stop and no JSON arrived, the process was killed — **just re-run the same poll
+  command** (queued feedback persists).
 - Run it as a **background task** and wait. Do not pass `--timeout-ms` (test-only).
 - Poll JSON: `{ status, prompts:[…], layout_warnings:[…], dom_snapshot, next_step }`.
 
-## Reading prompts
+## Reading comments (two lanes, no citation-id resolution needed)
 
-Each prompt is either an **element target** (`selector`/`tag`/`text`) or a **text-range target**:
+A citation click is handled entirely by DeepCitation's popover and never reaches you. So every prompt
+`poll` returns is a **comment on some specific** the user picked — an element or a text range:
 
 ```
 prompt = { uid, selector, tag, text, target? }
 target = { type:"text-range", text, selector, commonAncestorSelector, start:{…}, end:{…} }
 ```
 
-- `target.text` is the **verbatim selected bytes** (≤240 chars on the outer prompt) — the exact
-  phrase the user flagged. Pass it to the judge panel unchanged; do not paraphrase it. For a
-  text-range, `prompt.selector` and `target.commonAncestorSelector` carry the **same** ancestor
-  selector; use `target.start`/`target.end` (and `dom_snapshot`) when you need precise character
-  positions.
-- **Resolve the prompt to a citation `n`:**
-  - *Element click:* `event.target` is the deepest clicked node, so `selector` looks like
-    `span#cite-3 > strong`, **not** an exact `#cite-3`. Extract `n` with a `#cite-(\d+)` regex on
-    `selector` — never exact-match.
-  - *Text-range, normal case:* the range sits inside one `#cite-N` unit → `commonAncestorSelector`
-    contains a `#cite-N` / `cite-N` token; extract `n` the same way.
-  - *Text-range, cross-boundary (the canonical misquote-in-context flag):* a selection spanning
-    from inside `#cite-N` into surrounding prose has a common ancestor **above** the cite span
-    (e.g. `div.max-w-prose` / `<p>`), so its selector carries **no** `#cite-` token, and
-    `dom_snapshot` emits only `uid`/`tag`/`text` (no `data-cite-n`). **Do not silently drop the
-    flag.** Match `target.text` against the rendered cited spans' text to find which citation(s) it
-    overlaps. If still ambiguous (overlaps multiple, or none), ask the user which `[n]` via
-    `--agent-reply` before re-judging — do not burn the panel budget on all of them.
-- **Native-control submissions** (per-citation status/escalate forms) arrive as ordinary queued
-  prompts. The structured object you passed to `queuePrompt({ data:… })` is **not** a separate
-  field — lavish appends it to the prompt **text** as a `Context data:\n{…JSON…}` block. Recover
-  `{ citation, status, escalate }` by parsing that JSON out of `prompt` (e.g. `JSON.parse` on the
-  substring after `Context data:`); there is no top-level `data` key on the returned prompt.
+- `target.text` (or `prompt.text`) is the **verbatim bytes the user flagged** plus their message. Act on
+  it directly: reword the claim, re-anchor a citation, or `prepare` a better source. You do **not** need
+  to resolve the comment to a citation `n` — the flagged text and the message are the instruction. If
+  the comment is genuinely ambiguous about which claim it means, ask via `--agent-reply` rather than
+  guessing.
+- There is no per-citation status control and no judge panel: **the user does not set verification
+  status** (DeepCitation does), and a comment is acted on, not voted on.
 
 ## Reply + presence
 
-After applying changes, rewrite the file, then
-`npx -y lavish-axi poll <file> --agent-reply "Re-checked clause 7; [4] downgraded to review — source says 14 days, claim said 30."`
+After applying changes, rewrite the file (re-run `verify --html`), then reply:
+`npx -y lavish-axi poll <file> --agent-reply "Reworded clause 7 and re-cited p.14 — source says 14 days, not 30."`
 
 Agent presence (`waiting` / `listening` / `working`) is **chrome-owned and server-driven** over the
 `/events/:key` SSE stream — `listening` while a poll is active, `working` after a poll delivered
-feedback and released, `waiting` before any poll has attached. **You do not drive it from the
-artifact** — do not call `window.lavish.setStatus()` to push those states (it is an optional
-free-text status string, not the presence stream, and has no chrome handler for presence words).
-Just keeping a poll running is what makes the user see `listening`. Do not rewrite the HTML while
-the user is mid-annotation — write inside the poll handler, after feedback has been delivered.
+feedback, `waiting` before any poll attached. **You do not drive it from the artifact** (no
+`window.lavish.setStatus()` for presence). Keeping a poll running is what shows `listening`. Do not
+rewrite the HTML while the user is mid-annotation — write inside the poll handler, after feedback
+arrives.
 
 ## End
 
 When the user ends the session: `npx -y lavish-axi end <file>`, then `npx -y lavish-axi stop`. The
-artifact remains a portable HTML file on disk; all read-only interactions (popovers, scroll-to-row)
-must work without the server (see the playbooks' portability rule).
+artifact stays a portable HTML file; read-only interactions (citation popovers, scroll) should work
+without the lavish server, though evidence images load only with network access to the DeepCitation
+source assets.

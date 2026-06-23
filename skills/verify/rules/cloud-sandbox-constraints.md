@@ -16,14 +16,16 @@ Detect via any of: `$CLAUDE_CODE_REMOTE == "true"`, `$HTTP_PROXY`/`$HTTPS_PROXY`
 |---------|---------|------------|-------------|
 | `prepare` PDF | ~1 s | ~5 s | Almost certainly hung — abort and report |
 | `prepare` URL or office file | ~5 s | ~30 s | Wait up to 60 s, then abort |
+| `verify --html` (verify + embed) | a few s | ~60 s (renders evidence images server-side) | Approaching the 90 s ceiling means the request is stuck — abort and report |
 | `script -q -c "npx -y deepcitation@latest auth" /dev/null` | ~5–20 s | ~30 s | PTY is hanging on browser I/O — abort and fall back to `auth --key` |
 | `auth --key '<key>'` | <1 s | ~2 s | Abort and report |
 
-> The /verify pipeline calls **only** `prepare` (and `auth` when needed). There is **no**
-> `deepcitation verify` step — the coordinate match is the model's own anchor derivation against the
-> tagged prepare text (SKILL.md step 3). Do not add a `verify`/`verify --citations` call to "double
-> check" locations; it would render an output file (the dropped DeepCitation HTML path), not return
-> a render-free anchor result.
+> The /verify pipeline calls **`prepare`** (read evidence), **`verify --html`** (verify against the
+> source and embed DeepCitation's interactive citation runtime into the lavish-styled report —
+> SKILL.md step 4), and **`auth`** when needed. `verify --html` is *expected* to write/augment the
+> HTML — that **is** the embed, not a dropped path. Do not use `verify --md` or `verify --citations`:
+> `--md` renders a standalone DeepCitation-styled report (we style via lavish instead), and
+> `--citations` is a low-level call that skips the embed.
 
 The CLI enforces a 90-second hard ceiling per request and exits with a clear timeout error. **Do not extend it** by backgrounding with `&`, `for i in $(seq 1 24); do sleep 10`, `timeout 600 npx ...`, or similar. If the CLI hits its own timeout, the request is genuinely stuck.
 
