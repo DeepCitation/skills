@@ -10,8 +10,9 @@ use_when: >
 ```
 
 Open `npx -y lavish-axi playbook table` and `playbook input` before authoring. Reuse the shared
-head/theme, design tokens, badge classes, native-control contract, and portability rule from
-[annotated-report.md](annotated-report.md).
+head/theme, design tokens, badge legend, native-control contract, and portability rule from
+[annotated-report.md](annotated-report.md) (the badge legend itself lives in
+[../rules/runtime-roster.md](../rules/runtime-roster.md)).
 
 ## Choose
 
@@ -22,8 +23,8 @@ head/theme, design tokens, badge classes, native-control contract, and portabili
 
 ## Structure
 
-1. Summary line above the grid: "12 claims checked against `lease.pdf` — 9 verified, 2 review,
-   1 contradicted." Never bury the conclusion below the table.
+1. Summary line above the grid: "12 claims checked against `lease.pdf` — 9 verified, 1 review,
+   1 unmatched, 1 contradicted." Never bury the conclusion below the table.
 2. Columns grouped by the decision they support: **Claim** · **Source match / page·line** ·
    **Status** · **Action**.
 3. `table table-zebra` inside `overflow-x-auto rounded-box border border-base-content/5` so long
@@ -32,26 +33,30 @@ head/theme, design tokens, badge classes, native-control contract, and portabili
 
 ## Annotation targets
 
-- Each `<tr id="row-3" data-cite-n="3">` is an annotation target — a click round-trips
-  `selector:"#row-3"` and resolves to citation 3.
+- Each `<tr id="row-3" data-cite-n="3">` is an annotation target — a click round-trips a selector
+  resolving to citation 3 (extract `n` with a `#row-(\d+)` regex; the click lands on the deepest
+  cell node, so do not exact-match).
 - The **Source match** cell stays plain selectable text so the user can text-range-flag the exact
   verbatim phrase the agent claims is in the source (misquote detection). Do **not** make it a
-  native control.
+  native control. A range confined to that cell resolves to the row's `n`; a cross-cell selection
+  follows the text-range fallback in [../rules/lavish-loop.md](../rules/lavish-loop.md).
 - The **Action** column holds the per-row native form (`<select>` status + `escalate` checkbox)
   wrapped in `data-lavish-question="row-3"`, queued once on submit — identical contract to the hero
-  so re-render logic is shared.
+  (the `data:{…}` object arrives appended to the prompt text as `Context data:`).
 - Clicking a `[n]` anchor in the hero narrative should also highlight the matching `#row-N` here
   (self-contained JS via `data-cite-n` linkage), so the two surfaces stay correlated.
 
 ## Badges
 
-Status column = `badge badge-soft` success/warning/error + glyph (✓ ◐ ✕) + label, aligned in one
-scannable column. Optional `badge-outline` severity chip next to `contradicted` rows.
+Status column uses the four-way badge legend from
+[../rules/runtime-roster.md](../rules/runtime-roster.md): `verified` ✓ sage, `review` ◐ amber,
+`unmatched` ⊘ amber-outline, `contradicted` ✕ rust — each with its glyph **and** label, aligned in
+one scannable column.
 
 ## Pitfalls
 
 - Semantic `<table>` markup only — never a screenshot or pasted terminal table.
-- Sort/group `contradicted` and `review` rows to the top (or add a `stats` strip) so they don't hide
-  in a long grid.
+- Sort/group `contradicted`, `unmatched`, and `review` rows to the top (or add a `stats` strip) so
+  they don't hide in a long grid.
 - Source-match cell must remain text-range-selectable.
-- Status is never colour-only.
+- Status is never colour-only, and `unmatched` never collapses into `review` or `contradicted`.
