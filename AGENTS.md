@@ -21,8 +21,14 @@ Use progressive disclosure: keep this file minimal and load focused guidance onl
 
 ## Guidance Router
 
-- Working on SKILL.md authoring, pipeline steps, citation format, or `prepare`/`verify` command usage:
+- Working on SKILL.md authoring, the verify workflow steps, citation format, or `prepare` command usage:
   [skills/verify/SKILL.md](skills/verify/SKILL.md)
+- Working on the tiered audit, badge legend, judge panel, editor, or escalation triggers:
+  [skills/verify/rules/runtime-roster.md](skills/verify/rules/runtime-roster.md)
+- Working on the lavish-axi poll loop, layout gate, text-range prompts, native-control payloads, or session identity:
+  [skills/verify/rules/lavish-loop.md](skills/verify/rules/lavish-loop.md)
+- Working on the annotated-report, evidence-table, or discrepancy-report HTML artifact structure:
+  [skills/verify/playbooks/](skills/verify/playbooks/)
 - Working on auth handling, credential flow, or `action needed` recovery:
   [skills/verify/rules/auth.md](skills/verify/rules/auth.md)
 - Working on parallel generation, agent splitting, evidence tagging, merge failures, or 100+ page documents:

@@ -78,21 +78,26 @@ Each sub-agent prompt must include:
 - **Comprehensiveness**: extract every specific detail from the evidence — measurements, unit numbers, defined terms, thresholds. Distinguish categories (e.g., different types, parties, events) with separate subsections. A vague summary is a failure.
 - Each agent writes body text only (section heading + cited body text + `<<<CITATION_DATA>>>` block) and returns a one-line confirmation that includes the section heading and approximate line count (e.g. "Written: ## Pet Policy — 18 lines"). If an agent returns nothing or reports failure, do not proceed to merge — report the error to the user.
 
-## Merge and verify
+## Merge, then hand off to the lavish build
 
-After both agents complete, merge + verify in one command (renumber, citation generation, and verification happen automatically). Replace `{draft}` and `{topic}` with actual names (e.g. `lease-terms-body` and `lease-terms`):
+After both agents complete, merge the section bodies + their `<<<CITATION_DATA>>>` blocks into a
+single body (renumber + citation assembly happen automatically). Replace `{draft}` with an actual
+name (e.g. `lease-terms-body`):
 
 ```bash
-npx -y deepcitation@latest merge --a .deepcitation/section-a.md --b .deepcitation/section-b.md --out .deepcitation/{draft}-body.md && \
-npx -y deepcitation@latest verify --md .deepcitation/{draft}-body.md \
-  --title "Descriptive Report Title" \
-  --claim "The user's question or claim being verified" \
-  --out {topic}-verified.html
+npx -y deepcitation@latest merge --a .deepcitation/section-a.md --b .deepcitation/section-b.md --out .deepcitation/{draft}-body.md
 ```
+
+**Stop here — do NOT run `deepcitation verify`.** Under the current design lavish renders the
+artifact and DeepCitation is the evidence backend only; there is no `verify --md … --out
+{topic}-verified.html` render step (that was the dropped DeepCitation renderer). Hand the merged
+`.deepcitation/{draft}-body.md` (body + assembled citation records) back to **SKILL.md steps 4–5**:
+run the cheap audit to assign badges, then build the lavish report at `.lavish/<topic>-verify.html`
+and open the poll loop. Never produce a `{topic}-verified.html` artifact.
 
 ## Merge failure
 
-**If merge exits non-zero** (e.g. `merge refusing to write output — citation parsing failed`), STOP the pipeline — do NOT proceed to verify, and do NOT retry the identical agent dispatch. The `&&` chain will naturally abort before verify runs; the failing section file has a malformed `<<<CITATION_DATA>>>` block. Diagnostic loop:
+**If merge exits non-zero** (e.g. `merge refusing to write output — citation parsing failed`), STOP the pipeline — do NOT proceed to the lavish build, and do NOT retry the identical agent dispatch. The failing section file has a malformed `<<<CITATION_DATA>>>` block. Diagnostic loop:
 
 1. Read `.deepcitation/section-a.md` and `.deepcitation/section-b.md` with the Read tool. This overrides the "do not read files back" invariant — merge failure is a diagnostic condition, not exploratory reading.
 2. Inspect each section's CITATION_DATA block for: empty or whitespace-only body between the delimiters, a markdown `` ```json `` fence wrapping the JSON, missing `n` field on citation objects, or truncated JSON.
