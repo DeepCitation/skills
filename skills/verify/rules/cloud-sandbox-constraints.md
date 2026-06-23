@@ -16,9 +16,14 @@ Detect via any of: `$CLAUDE_CODE_REMOTE == "true"`, `$HTTP_PROXY`/`$HTTPS_PROXY`
 |---------|---------|------------|-------------|
 | `prepare` PDF | ~1 s | ~5 s | Almost certainly hung — abort and report |
 | `prepare` URL or office file | ~5 s | ~30 s | Wait up to 60 s, then abort |
-| `verify --citations` (render-free anchor check) | ~0.5 s | ~5 s | Almost certainly hung — abort and report |
 | `script -q -c "npx -y deepcitation@latest auth" /dev/null` | ~5–20 s | ~30 s | PTY is hanging on browser I/O — abort and fall back to `auth --key` |
 | `auth --key '<key>'` | <1 s | ~2 s | Abort and report |
+
+> The /verify pipeline calls **only** `prepare` (and `auth` when needed). There is **no**
+> `deepcitation verify` step — the coordinate match is the model's own anchor derivation against the
+> tagged prepare text (SKILL.md step 3). Do not add a `verify`/`verify --citations` call to "double
+> check" locations; it would render an output file (the dropped DeepCitation HTML path), not return
+> a render-free anchor result.
 
 The CLI enforces a 90-second hard ceiling per request and exits with a clear timeout error. **Do not extend it** by backgrounding with `&`, `for i in $(seq 1 24); do sleep 10`, `timeout 600 npx ...`, or similar. If the CLI hits its own timeout, the request is genuinely stuck.
 
