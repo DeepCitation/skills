@@ -69,8 +69,8 @@ rule and Format 1/2 anchor rules live unchanged in [rules/citation-anchors.md](r
    mkdir -p .deepcitation .lavish
    npx -y deepcitation@latest prepare <file-or-url> > .deepcitation/<name>.json
    ```
-   Capture each source's **`attachmentId`** (printed on stderr, also stored as `attachmentId` in the
-   JSON) — step 3's citation block is keyed by it. Multiple sources: one parallel `prepare` each (`&` +
+   Read each source's **`attachmentId`** from the prepare JSON (the `attachmentId` field) — step 3's
+   citation block is keyed by it. Multiple sources: one parallel `prepare` each (`&` +
    `wait`). On **"action needed"** follow
    [rules/auth.md](rules/auth.md); on sandbox/network behavior see
    [rules/cloud-sandbox-constraints.md](rules/cloud-sandbox-constraints.md). Never `DEEPCITATION_API_KEY=`
@@ -88,7 +88,12 @@ rule and Format 1/2 anchor rules live unchanged in [rules/citation-anchors.md](r
    <<<END_CITATION_DATA>>>
    ```
    A flat list of objects with no `attachmentId` wrapper fails with *"No valid CITATION_DATA block
-   found"*. The answer is the deliverable; citations are inline and scannable. **DeepCitation's popover
+   found"*. **Per-citation self-check (in CoT order, before writing each marker):** find the verbatim
+   source sentence first and put it in `f`, then derive `k` as a word-for-word substring of `f`; if
+   your key phrase isn't in `f`, fix `f` first — don't wait for `verify` to flag a bad anchor.
+   **Answer the hard part as fully as the easy part:** when the question has multiple sub-claims, cite
+   the difficult one as thoroughly as the obvious one — a deep answer to the easy half is a failure.
+   The answer is the deliverable; citations are inline and scannable. **DeepCitation's popover
    is the evidence surface — do NOT build a separate evidence table, status grid, or discrepancy list;
    that re-presents what the live citation already shows.** For 100+ pages across 3+ files, split per
    [rules/parallel-generation.md](rules/parallel-generation.md) (subagents emit per-section bodies +
