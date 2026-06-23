@@ -48,22 +48,24 @@ evidence keyhole crop of the actual record line, then the page view.
 - ✅ PASS: each claim's popover shows the real source line/page.
 - ❌ FAIL: a claim has no citation, or the popover crop doesn't contain the claimed text.
 
-### 2. Status is discrete — never a confidence score
-The badge is one of: `verified` (in the chart, verbatim), `variance` (true but
-the wording drifts — e.g. report "penicillin allergy" vs chart "PCN — hives",
-reconciled by the variance footnote), `unverified` (not found in the record),
-`pending`.
+### 2. Status is binary — never a confidence score
+The CLI embed renders one of two states, anchored on the **context sentence**: `verified`
+(the cited `sourceContext` sentence was located in the chart) or `unverified` (it was
+not). There is no `variance`/`pending` state and no numeric score in the embed.
 
-- ✅ PASS: badges are these four states; no percentage, star rating, or "confidence" appears anywhere.
+- ✅ PASS: badges are `verified`/`unverified` only; no percentage, star rating, or "confidence" appears anywhere.
 - ❌ FAIL: any numeric confidence, trust meter, hero banner, or verification dashboard.
 
-### 3. The miss-detector works
-An `unverified` badge marks any statement the report makes that is **not** in the
-records — the safety net against a confident hallucination (e.g. an asserted "no
-prior MI" the chart never states).
+### 3. The badge follows the context, so the click is what verifies
+The badge tracks whether the cited **`sourceContext` sentence** exists — not whether the
+*claim* is true. A claim whose context sentence is real but whose wording overstates it
+still reads `verified` (e.g. a synthesis that "corrects" the chart's "fear of spiders" to
+the textbook "fear of heights" — the sentence is found, so the badge says verified). The
+safety net is the **keyhole**: it shows the real sentence, so the physician who clicks sees
+the mismatch. A claim is only `unverified` when its context sentence is absent from the chart.
 
-- ✅ PASS: a claim with no source support reads `unverified`, not `verified`.
-- ❌ FAIL: an unsupported claim is presented as verified.
+- ✅ PASS: every cited claim's keyhole shows a source sentence that genuinely supports the claim; a claim with no supporting sentence reads `unverified`.
+- ❌ FAIL: a claim's keyhole sentence contradicts or fails to support the bolded claim (author must fix `sourceContext`/`sourceMatch`), or an unsupported claim is presented without any way to catch it.
 
 ### 4. Loose threads surface, anchored
 The "flagged but never closed out" section names real open items —

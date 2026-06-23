@@ -23,9 +23,11 @@ Detect via any of: `$CLAUDE_CODE_REMOTE == "true"`, `$HTTP_PROXY`/`$HTTPS_PROXY`
 > The /verify pipeline calls **`prepare`** (read evidence), **`verify --html`** (verify against the
 > source and embed DeepCitation's interactive citation runtime into the lavish-styled report —
 > SKILL.md step 4), and **`auth`** when needed. `verify --html` is *expected* to write/augment the
-> HTML — that **is** the embed, not a dropped path. Do not use `verify --md` or `verify --citations`:
-> `--md` renders a standalone DeepCitation-styled report (we style via lavish instead), and
-> `--citations` is a low-level call that skips the embed.
+> HTML — that **is** the embed, not a dropped path. It writes the embed to **`{stem}-verified.html`**
+> (it ignores `--out`), so open *that* file in lavish; pass **`--local-only`** so the report is not
+> uploaded to "My Verifications". Do not use `verify --md` or `verify --citations`: `--md` renders a
+> standalone DeepCitation-styled report (we style via lavish instead), and `--citations` is a low-level
+> call that skips the embed.
 
 The CLI enforces a 90-second hard ceiling per request and exits with a clear timeout error. **Do not extend it** by backgrounding with `&`, `for i in $(seq 1 24); do sleep 10`, `timeout 600 npx ...`, or similar. If the CLI hits its own timeout, the request is genuinely stuck.
 
@@ -43,4 +45,4 @@ lavish renders the report and runs the review loop (full contract in [lavish-loo
 
 **`poll` is long-running by design.** It stays silent until the user acts or the browser reports fresh `layout_warnings` — that silence is normal, never a hang. In a 45 s sandbox it **will** be killed. Run `npx -y lavish-axi poll <file>` as a **background task** and wait for it; if the harness kills it, **just re-run it** — queued feedback is never lost. Do not pass `--timeout-ms` (test-only). Do not interpret a killed poll as "the user said nothing."
 
-**The browser may not auto-open in WSL/headless.** Opening the report still creates the session on disk. If no window appears, give the user the path/URL from the open output explicitly so they can open `.lavish/<topic>-verify.html` themselves; the artifact is portable and works without the server for read-only review.
+**The browser may not auto-open in WSL/headless.** Opening the report still creates the session on disk. If no window appears, give the user the path/URL from the open output explicitly so they can open `.lavish/<topic>-verified.html` themselves; the artifact is portable and works without the server for read-only review.

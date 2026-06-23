@@ -88,14 +88,18 @@ name (e.g. `lease-terms-body`):
 npx -y deepcitation@latest merge --a .deepcitation/section-a.md --b .deepcitation/section-b.md --out .deepcitation/{draft}-body.md
 ```
 
+`merge` assembles the per-section citations into the single `<<<CITATION_DATA>>>` object **grouped by
+`attachmentId`** that `verify --html` requires (a flat, unwrapped list is rejected with *"No valid
+CITATION_DATA block found"*).
+
 **Do NOT run `verify --md` here.** `--md` renders a *standalone* DeepCitation-styled report; we style
 via lavish instead. Hand the merged `.deepcitation/{draft}-body.md` (assembled body + citation
 records) back to **SKILL.md step 3**: author it into the lavish-styled HTML report at
-`.lavish/<topic>-verify.html` with each cited phrase as a `data-cite` span, then **step 4** runs
-`verify --html` once to verify against the source and embed DeepCitation's interactive citations, and
-**step 5** opens the lavish poll loop. The final artifact is `.lavish/<topic>-verify.html`; do not emit
-a separate `{topic}-verified.html` in CWD. There is no cheap-audit/badge-assignment step — `verify
---html` sets each citation's status.
+`.lavish/<topic>.html` with each cited phrase as a `data-cite` span, then **step 4** runs `verify
+--html` once — it verifies against the source, embeds DeepCitation's interactive citations, and writes
+the artifact to `.lavish/<topic>-verified.html` (it ignores `--out`). **Step 5** adds
+`data-lavish-action` to the citations and opens the lavish poll loop on the verified file. There is no
+cheap-audit/badge-assignment step — `verify --html` sets each citation's status.
 
 ## Merge failure
 

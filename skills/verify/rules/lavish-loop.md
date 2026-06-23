@@ -27,19 +27,26 @@ Use **only** these lavish verbs/flags; do not invent others.
    `data-citation-key`, injects `#dc-data` + scoped CSS + the runtime, and returns **your HTML with its
    styling intact**. The runtime's CSS is low-specificity (`:where(...)`, `data-dc-*`) and does not
    fight Tailwind/DaisyUI.
-3. **Coexistence — keep citation clicks away from lavish.** The DeepCitation runtime binds clicks on
-   `[data-citation-key]`; lavish must treat those elements as interactive (not annotation targets) so a
-   citation click opens the DeepCitation popover instead of starting a comment. Mark each cited element
-   as lavish-excluded (the same way custom interactive controls opt out, e.g. `data-lavish-action` on
-   the cited span — confirm against lavish's `artifact-sdk.js` control detection). Everything else
-   (prose, headings, table cells) stays freely commentable.
+3. **Coexistence — keep citation clicks away from lavish (post-embed sweep).** The DeepCitation runtime
+   binds clicks on `[data-citation-key]`. `verify --html` does **not** mark those elements for lavish,
+   and you can't pre-mark them (keys are hashed at verify time) — so **after** the embed, add
+   `data-lavish-action` to every `[data-citation-key]`:
+   ```bash
+   perl -0pi -e 's/(<[a-zA-Z][\w-]*)(?=[^>]*\sdata-citation-key=)/$1 data-lavish-action/g' .lavish/<topic>-verified.html
+   ```
+   Verified against `artifact-sdk.js`: all three annotation handlers (`mouseover`, `mouseup`/select,
+   **`click`**) bail on `isLavishAction(target)` = `closest("[data-lavish-action]")`, so a marked
+   citation is skipped by lavish on hover, select, AND click — its click reaches DeepCitation's popover
+   instead. Everything else (prose, headings, table cells) stays freely commentable.
 
 ## Session identity = canonical file path
 
-Sessions are keyed by the **canonical absolute file path**, not an opaque id. Write the report to a
-stable path (`.lavish/<topic>-verify.html`) and **never rename it between iterations** — renaming
-starts a new session and loses queued feedback and scroll position. Re-rendering = rewrite the same
-path (re-run `verify --html` onto it); the watcher hot-reloads the browser.
+Sessions are keyed by the **canonical absolute file path**, not an opaque id. lavish opens the
+**verified** artifact (`.lavish/<topic>-verified.html`); keep that path stable and **never rename it
+between iterations** — renaming starts a new session and loses queued feedback and scroll position.
+Re-rendering = edit the authored `.lavish/<topic>.html`, re-run `verify --html` (it regenerates
+`<topic>-verified.html` in place), then re-run the `data-lavish-action` sweep; the watcher hot-reloads
+the browser.
 
 ## Open + layout gate (before the user)
 
